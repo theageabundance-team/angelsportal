@@ -46,7 +46,6 @@ async function callGemini(apiKey, payload, retries = 3) {
   }
 }
 
-// Gera um resumo atualizado da pessoa com base nas conversas
 async function updateMemory(apiKey, userName, currentMemory, recentMessages) {
   try {
     const conversationText = recentMessages
@@ -90,7 +89,53 @@ Do NOT include anything that wasn't actually mentioned. Do NOT invent details.`;
   }
 }
 
-export default async function handler(req) {
+// Funcao separada de salvar — chamada com waitUntil para nao ser cortada pelo Edge
+async function saveToSupabase(SUPABASE_URL, SUPABASE_KEY, email, chatHistory, memory, history, reply, apiKey, userName) {
+  const userMsg = history[history.length - 1]?.parts?.[0]?.text || '';
+  const now = new Date().toISOString();
+  const todayDate = now.split('T')[0]; // Formato "YYYY-MM-DD" correto para coluna tipo date
+
+  const newChatHistory = [
+    ...chatHistory,
+    { role: 'user',  text: userMsg, time: now },
+    { role: 'angel', text: reply,   time: now }
+  ].slice(-30);
+
+  const shouldUpdateMemory = newChatHistory.length % 10 === 0;
+  let newMemory = memory;
+
+  if (shouldUpdateMemory && newChatHistory.length >= 6) {
+    const recentForMemory = newChatHistory.slice(-10);
+    newMemory = await updateMemory(apiKey, userName, memory, recentForMemory);
+    console.log('Memory updated for:', email);
+  }
+
+  console.log('Saving chat_history for:', email, '— messages:', newChatHistory.length);
+
+  const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      chat_history: newChatHistory,
+      memory: newMemory,
+      last_seen: todayDate
+    })
+  });
+
+  if (!saveRes.ok) {
+    const errBody = await saveRes.text();
+    console.error('Supabase PATCH failed:', saveRes.status, errBody);
+  } else {
+    console.log('Supabase save OK for:', email);
+  }
+}
+
+export default async function handler(req, ctx) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -149,58 +194,20 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
       generationConfig: { temperature: 0.92, maxOutputTokens: 1000, topP: 0.95 }
     });
 
-    // 2. Salva histórico e atualiza memória em background (não bloqueia a resposta)
+    // 2. Salva no Supabase — aguarda direto para garantir que o save complete
+    // (nao usa background porque o Edge Runtime pode cancelar antes de terminar)
     if (email && SUPABASE_URL && SUPABASE_KEY) {
-      const userMsg = history[history.length - 1]?.parts?.[0]?.text || '';
-      const now = new Date().toISOString();
+      const savePromise = saveToSupabase(
+        SUPABASE_URL, SUPABASE_KEY, email,
+        chatHistory, memory, history, reply, apiKey, userName
+      );
 
-      const newChatHistory = [
-        ...chatHistory,
-        { role: 'user',  text: userMsg, time: now },
-        { role: 'angel', text: reply,   time: now }
-      ].slice(-30); // Guarda as últimas 30 mensagens
-
-      // Roda em background — não segura a resposta
-      (async () => {
-        try {
-          // A cada 5 trocas de mensagem, atualiza a memória
-          const shouldUpdateMemory = newChatHistory.length % 10 === 0;
-          let newMemory = memory;
-
-          if (shouldUpdateMemory && newChatHistory.length >= 6) {
-            // Pega as últimas 10 mensagens para gerar o resumo
-            const recentForMemory = newChatHistory.slice(-10);
-            newMemory = await updateMemory(apiKey, userName, memory, recentForMemory);
-            console.log('Memory updated for:', email);
-          }
-
-          // ✅ FIX: last_seen precisa ser só "YYYY-MM-DD" (tipo date no Supabase)
-          const todayDate = new Date().toISOString().split('T')[0];
-
-          const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({
-              chat_history: newChatHistory,
-              memory: newMemory,
-              last_seen: todayDate  // ✅ FIX: era "now" (timestamp completo), agora é só a data
-            })
-          });
-
-          // ✅ FIX: loga erro detalhado se o Supabase rejeitar
-          if (!saveRes.ok) {
-            const errBody = await saveRes.text();
-            console.error('Supabase PATCH failed:', saveRes.status, errBody);
-          }
-        } catch (e) {
-          console.error('Background save error:', e);
-        }
-      })();
+      // ctx.waitUntil mantem o worker vivo apos a response; com fallback para await direto
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(savePromise);
+      } else {
+        await savePromise;
+      }
     }
 
     return json({ reply });
