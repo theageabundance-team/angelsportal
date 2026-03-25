@@ -329,8 +329,13 @@ const WEEKS = [
 let prayed = JSON.parse(localStorage.getItem('ap_prayed')||'{}');
 let modalWeek=0, modalDay=0;
 
-const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
-function getDayNumber() { return Math.floor((new Date()-JOIN_DATE)/86400000)+1; }
+function getJoinDate() {
+  const raw = localStorage.getItem('ap_joined');
+  if (!raw) return new Date(); // sem data = dia 1
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+function getDayNumber() { return Math.max(1, Math.floor((new Date()-getJoinDate())/86400000)+1); }
 function getDayInfo(n) { const wi=Math.floor((n-1)/7),di=(n-1)%7; if(wi>=WEEKS.length)return null; return{week:WEEKS[wi],wi,di}; }
 function formatDate(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric'}); }
 
@@ -379,7 +384,7 @@ function buildAccordion(){
     week.days.forEach((day,di)=>{
       const gd=wi*7+di+1, isToday=gd===dayNum, isLocked=gd>dayNum;
       const key=`${wi}-${di}`, done=prayed[key];
-      const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+wi*7+di);
+      const dd=new Date(getJoinDate()); dd.setDate(getJoinDate().getDate()+wi*7+di);
       const row=document.createElement('div');
       row.className='day-row'+(isToday?' today-row':'')+(done?' done-row':'')+(isLocked?' locked':'');
       row.innerHTML=`
@@ -397,7 +402,7 @@ function openTodayPrayer(){ const i=getDayInfo(getDayNumber()); if(i)openPrayer(
 function openPrayer(wi,di){
   const week=WEEKS[wi], day=week.days[di], key=`${wi}-${di}`, done=prayed[key];
   modalWeek=wi; modalDay=di;
-  const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+wi*7+di);
+  const dd=new Date(getJoinDate()); dd.setDate(getJoinDate().getDate()+wi*7+di);
   document.getElementById('modalTitle').textContent=day.title;
   document.getElementById('modalSub').textContent=formatDate(dd);
   document.getElementById('modalWeekTag').textContent=`Week ${wi+1} · ${week.theme} · ${week.angel}`;
