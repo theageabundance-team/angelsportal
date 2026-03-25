@@ -60,8 +60,12 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-    const { message, userName = 'dear one', email = '', memory = '' } = body;
-    if (!message) return json({ error: 'Message required' }, 400);
+    const { history = [], userName = 'dear one', email = '', memory = '' } = body;
+    if (!history.length) return json({ error: 'Message required' }, 400);
+
+    // Last user message in history — used for memory update
+    const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
+    const message = lastUserMsg?.parts?.[0]?.text || '';
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return json({ error: 'Missing GEMINI_API_KEY' }, 500);
@@ -127,8 +131,8 @@ MEMORY: ${memorySection}`;
     try {
       geminiData = await callGemini(apiKey, {
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.92, maxOutputTokens: 1024, topP: 0.95 }
+        contents: history,
+        generationConfig: { temperature: 0.92, maxOutputTokens: 2048, topP: 0.95 }
       });
     } catch (err) {
       console.error('Gemini call failed:', err.message);
@@ -149,7 +153,7 @@ MEMORY: ${memorySection}`;
         const retryData = await callGemini(apiKey, {
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: 'The person sent me this message: "' + message + '". Please respond with compassion and wisdom.' }] }],
-          generationConfig: { temperature: 0.85, maxOutputTokens: 1024, topP: 0.95 }
+          generationConfig: { temperature: 0.85, maxOutputTokens: 2048, topP: 0.95 }
         });
         reply = retryData?.candidates?.[0]?.content?.parts?.[0]?.text;
       } catch (e) {
@@ -163,7 +167,7 @@ MEMORY: ${memorySection}`;
         const fallbackData = await callGemini(apiKey, {
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: 'Please greet me warmly and ask what is on my heart today.' }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 512, topP: 0.95 }
+          generationConfig: { temperature: 0.9, maxOutputTokens: 2048, topP: 0.95 }
         });
         reply = fallbackData?.candidates?.[0]?.content?.parts?.[0]?.text;
       } catch (e) {

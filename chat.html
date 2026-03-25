@@ -125,10 +125,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:no
 </div>
 
 <script>
-// Load user from localStorage (set at login)
 const USER_NAME  = localStorage.getItem('ap_name')  || 'dear one';
 const USER_EMAIL = localStorage.getItem('ap_email') || '';
-const USER_MEMORY = localStorage.getItem('ap_memory') || '';
+
+// In-session conversation history sent to Gabriel for context (max 16 turns = 8 exchanges)
+const conversationHistory = [];
+const MAX_HISTORY = 16;
 
 // Stars
 const starsEl = document.getElementById('stars');
@@ -191,12 +193,20 @@ function scrollBottom() {
   setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 60);
 }
 
+function pushHistory(role, text) {
+  conversationHistory.push({ role, parts: [{ text }] });
+  // Keep bounded: remove oldest pair when over limit
+  if (conversationHistory.length > MAX_HISTORY) conversationHistory.splice(0, 2);
+}
+
 async function sendMessage() {
   const text = msgInput.value.trim();
   if (!text) return;
 
   document.getElementById('suggestionsWrap').style.display = 'none';
   appendMsg(text, 'user');
+  pushHistory('user', text);
+
   msgInput.value = '';
   msgInput.style.height = 'auto';
   sendBtn.disabled = true;
@@ -208,7 +218,7 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: text,
+        history: conversationHistory.slice(),
         userName: USER_NAME,
         email: USER_EMAIL,
         memory: localStorage.getItem('ap_memory') || ''
@@ -218,17 +228,15 @@ async function sendMessage() {
     const data = await res.json();
     removeTyping();
 
-    if (data.reply) {
-      appendMsg(data.reply, 'angel');
-      // Update local memory cache
-      if (data.updatedMemory) localStorage.setItem('ap_memory', data.updatedMemory);
-    } else {
-      appendMsg('I am here with you. Please speak to me again.', 'angel');
-    }
+    const reply = data.reply || 'I am here with you. Please speak to me again.';
+    appendMsg(reply, 'angel');
+    pushHistory('model', reply);
 
   } catch (err) {
     removeTyping();
-    appendMsg('I am always with you, even in silence. Please try again.', 'angel');
+    const errMsg = 'I am always with you, even in silence. Please try again.';
+    appendMsg(errMsg, 'angel');
+    pushHistory('model', errMsg);
   }
 
   sendBtn.disabled = false;
@@ -250,11 +258,27 @@ function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
-// Opening message
-window.addEventListener('load', () => {
+// Opening: fetch fresh memory from Supabase, then show Gabriel's greeting
+window.addEventListener('load', async () => {
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const memory = localStorage.getItem('ap_memory') || '';
+
+  showTyping();
+
+  let memory = localStorage.getItem('ap_memory') || '';
+
+  if (USER_EMAIL) {
+    try {
+      const memRes = await fetch('/api/memory?email=' + encodeURIComponent(USER_EMAIL));
+      if (memRes.ok) {
+        const memData = await memRes.json();
+        if (memData.memory) {
+          memory = memData.memory;
+          localStorage.setItem('ap_memory', memory);
+        }
+      }
+    } catch (e) { /* use cached */ }
+  }
 
   const openings = memory
     ? [
@@ -269,10 +293,13 @@ window.addEventListener('load', () => {
       ];
 
   const msg = openings[Math.floor(Math.random() * openings.length)];
+
   setTimeout(() => {
-    showTyping();
-    setTimeout(() => { removeTyping(); appendMsg(msg, 'angel'); }, 1800);
-  }, 600);
+    removeTyping();
+    appendMsg(msg, 'angel');
+    // Seed history with opening so Gabriel has context from message #1
+    pushHistory('model', msg);
+  }, 1200);
 });
 </script>
 </body>
