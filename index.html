@@ -588,8 +588,7 @@ let intentionDone = false;
 let modalWeek = 0, modalDay = 0;
 let prayed = JSON.parse(localStorage.getItem('ap_prayed') || '{}');
 
-const JOIN_DATE = new Date();
-JOIN_DATE.setDate(JOIN_DATE.getDate() - 6);
+const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
 
 function getDayNumber() {
   return Math.floor((new Date() - JOIN_DATE) / 86400000) + 1;
@@ -625,6 +624,7 @@ window.addEventListener('load', () => {
     dash.style.display = 'block';
     dash.classList.add('active');
     dash.style.opacity = '1';
+    updateDashboardPills();
   }
 });
 
@@ -641,12 +641,28 @@ function buildStars() {
 
 function buildStreakDays() {
   const el = document.getElementById('streakDays');
-  for (let i = 1; i <= 10; i++) {
+  el.innerHTML = '';
+  const dayNum = getDayNumber();
+  const total = Math.min(Math.max(dayNum + 2, 5), 10);
+  for (let i = 1; i <= total; i++) {
     const d = document.createElement('div');
-    d.className = 'streak-day' + (i < 7 ? ' done' : i === 7 ? ' today' : '');
-    d.textContent = i < 7 ? '✦' : i;
+    d.className = 'streak-day' + (i < dayNum ? ' done' : i === dayNum ? ' today' : '');
+    d.textContent = i < dayNum ? '✦' : i;
     el.appendChild(d);
   }
+}
+
+function updateDashboardPills() {
+  const dayNum = getDayNumber();
+  const UNLOCK_DAYS = [3, 7, 14, 21, 30];
+  const unlocked = UNLOCK_DAYS.filter(d => dayNum >= d).length;
+  const locked = UNLOCK_DAYS.length - unlocked;
+  const streakValEl = document.getElementById('streakVal');
+  if (streakValEl) streakValEl.textContent = dayNum;
+  const pills = document.querySelectorAll('.streak-val');
+  if (pills[1]) pills[1].textContent = unlocked;
+  if (pills[2]) pills[2].textContent = locked;
+  buildStreakDays();
 }
 
 // ===== NAVIGATION =====
@@ -708,6 +724,7 @@ async function enterPortal() {
 
   btn.textContent = 'Enter the Portal ✦';
   btn.disabled = false;
+  updateDashboardPills();
   goTo('dashboard');
 }
 
