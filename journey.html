@@ -335,8 +335,13 @@ if (journeyAvatar) {
 }
 
 // Streak e unlocks calculados a partir da data de cadastro real
-const JOIN_DATE_J = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
-const dayNumJ = Math.max(1, Math.floor((new Date() - JOIN_DATE_J) / 86400000) + 1);
+function getJoinDate() {
+  const raw = localStorage.getItem('ap_joined');
+  if (!raw) return new Date();
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+const dayNumJ = Math.max(1, Math.floor((new Date() - getJoinDate()) / 86400000) + 1);
 
 // Atualiza o número grande de streak
 document.querySelector('.streak-number').textContent = dayNumJ;
