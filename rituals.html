@@ -358,9 +358,8 @@ const RITUALS = [
 let done = JSON.parse(localStorage.getItem('ap_rituals')||'{}');
 let modalIdx = 0;
 
-// Day 1-indexed from join
-const JOIN_DATE = new Date();
-JOIN_DATE.setDate(JOIN_DATE.getDate()-2); // demo: on day 3
+// Day 1-indexed from join date real do cadastro
+const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
 function getDayNum() { return Math.min(Math.floor((new Date()-JOIN_DATE)/86400000)+1, 15); }
 function formatDate(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric'}); }
 
