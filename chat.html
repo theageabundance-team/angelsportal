@@ -81,6 +81,7 @@ body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:no
 .input-row:focus-within { border-color:rgba(212,160,23,0.4); }
 .msg-input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'Lora',serif; font-size:16px; line-height:1.5; resize:none; max-height:100px; min-height:24px; overflow-y:auto; }
 .msg-input::placeholder { color:var(--text-dim); font-style:italic; }
+.msg-input:disabled { opacity: 0.5; }
 .send-btn { width:42px; height:42px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,#f0c040,#d4a017,#b8860b); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 14px rgba(212,160,23,0.4); transition:transform 0.15s; }
 .send-btn:active { transform:scale(0.9); }
 .send-btn:disabled { opacity:0.5; cursor:not-allowed; }
@@ -128,15 +129,12 @@ body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:no
 const USER_NAME  = localStorage.getItem('ap_name')  || 'dear one';
 const USER_EMAIL = localStorage.getItem('ap_email') || '';
 
-// Gemini multi-turn context (role: 'user'|'model'). Must start with user turn.
 const conversationHistory = [];
-const MAX_HISTORY = 16; // 8 exchanges
+const MAX_HISTORY = 16; 
 
-// Persistent display history saved to Supabase (role: 'user'|'angel').
 const displayHistory = [];
-const MAX_DISPLAY = 10; // last 5 exchanges stored
+const MAX_DISPLAY = 10; 
 
-// Stars
 const starsEl = document.getElementById('stars');
 for (let i = 0; i < 80; i++) {
   const s = document.createElement('div');
@@ -197,7 +195,6 @@ function scrollBottom() {
   setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 60);
 }
 
-// Push to both arrays, keeping each bounded.
 function recordTurn(role, text, time) {
   const geminiRole = role === 'angel' ? 'model' : 'user';
   conversationHistory.push({ role: geminiRole, parts: [{ text }] });
@@ -208,6 +205,9 @@ function recordTurn(role, text, time) {
 }
 
 async function sendMessage() {
+  // FIX 1: Trava de segurança para impedir o duplo Enter
+  if (sendBtn.disabled) return; 
+
   const text = msgInput.value.trim();
   if (!text) return;
 
@@ -218,7 +218,10 @@ async function sendMessage() {
 
   msgInput.value = '';
   msgInput.style.height = 'auto';
+  
+  // FIX 2: Desativa botão E o campo de texto
   sendBtn.disabled = true;
+  msgInput.disabled = true;
   document.getElementById('angelStatus').textContent = 'Gabriel is writing...';
   showTyping();
 
@@ -238,19 +241,29 @@ async function sendMessage() {
     const data = await res.json();
     removeTyping();
 
-    const reply = data.reply || 'I am here with you. Please speak to me again.';
+    // FIX 3: Lê o erro real do backend em vez de engolir ele
+    if (!res.ok || data.error) {
+      throw new Error(data.error || 'Server error');
+    }
+
+    const reply = data.reply;
     const angelTime = getTime();
     appendMsg(reply, 'angel', angelTime);
     recordTurn('angel', reply, angelTime);
 
   } catch (err) {
     removeTyping();
-    const errMsg = 'I am always with you, even in silence. Please try again.';
+    console.error(err);
+    // Mensagem amigável de erro de conexão, e não a frase fantasma repetitiva
+    const errMsg = 'I am sensing a disturbance in the connection right now. Please wait a moment and speak to me again.';
     appendMsg(errMsg, 'angel');
+  } finally {
+    // FIX 4: Libera tudo de volta só depois de terminar
+    sendBtn.disabled = false;
+    msgInput.disabled = false;
+    msgInput.focus();
+    document.getElementById('angelStatus').textContent = 'Always listening, always present';
   }
-
-  sendBtn.disabled = false;
-  document.getElementById('angelStatus').textContent = 'Always listening, always present';
 }
 
 function useSuggestion(el) {
@@ -265,10 +278,12 @@ function autoResize(el) {
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey) { 
+    e.preventDefault(); 
+    sendMessage(); 
+  }
 }
 
-// On load: fetch memory + chat_history from Supabase, restore conversation.
 window.addEventListener('load', async () => {
   showTyping();
 
@@ -288,13 +303,12 @@ window.addEventListener('load', async () => {
           savedChat = memData.chatHistory;
         }
       }
-    } catch (e) { /* use cached */ }
+    } catch (e) { }
   }
 
   removeTyping();
 
   if (savedChat.length) {
-    // Render previous messages and seed both history arrays
     savedChat.forEach(m => {
       appendMsg(m.text, m.role, m.time);
       displayHistory.push(m);
@@ -303,18 +317,16 @@ window.addEventListener('load', async () => {
         parts: [{ text: m.text }]
       });
     });
-    // Trim to limits in case saved data was larger
+    
     while (displayHistory.length > MAX_DISPLAY) displayHistory.splice(0, 1);
     while (conversationHistory.length > MAX_HISTORY) conversationHistory.splice(0, 2);
 
-    // Brief "I'm still here" note — does NOT go into history (it's a UI marker)
     showTyping();
     setTimeout(() => {
       removeTyping();
       appendMsg('I\'m still here with you. What\'s on your heart today?', 'angel');
     }, 900);
   } else {
-    // First visit or cleared history — show opening greeting
     const hour = new Date().getHours();
     const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const openings = memory
