@@ -326,7 +326,22 @@ const WEEKS = [
   }
 ];
 
-let prayed = JSON.parse(localStorage.getItem('ap_prayed')||'{}');
+// Mescla progresso local com o do Supabase (ap_prayers vem do login)
+const localPrayed = JSON.parse(localStorage.getItem('ap_prayed')||'{}');
+const cloudPrayed = JSON.parse(localStorage.getItem('ap_prayers')||'{}');
+let prayed = Object.assign({}, localPrayed, cloudPrayed); // cloud tem prioridade
+localStorage.setItem('ap_prayed', JSON.stringify(prayed)); // sincroniza local
+const USER_EMAIL_P = localStorage.getItem('ap_email') || '';
+
+// Sincroniza prayers_done com Supabase em background
+function syncPrayersToCloud() {
+  if (!USER_EMAIL_P) return;
+  fetch('/api/progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: USER_EMAIL_P, prayers_done: prayed })
+  }).catch(e => console.error('Sync prayers error:', e));
+}
 let modalWeek=0, modalDay=0;
 
 function getJoinDate() {
@@ -421,6 +436,7 @@ function markPrayed(){
   const key=`${modalWeek}-${modalDay}`;
   if(prayed[key])return;
   prayed[key]=true; localStorage.setItem('ap_prayed',JSON.stringify(prayed));
+  syncPrayersToCloud();
   const btn=document.getElementById('modalPrayBtn');
   btn.textContent='✦ Prayer completed'; btn.classList.add('done');
   showCelebration();
