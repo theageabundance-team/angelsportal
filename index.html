@@ -632,10 +632,15 @@ let intentionDone = false;
 let modalWeek = 0, modalDay = 0;
 let prayed = JSON.parse(localStorage.getItem('ap_prayed') || '{}');
 
-const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
+function getJoinDate() {
+  const raw = localStorage.getItem('ap_joined');
+  if (!raw) return new Date(); // sem data = dia 1
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
 
 function getDayNumber() {
-  return Math.floor((new Date() - JOIN_DATE) / 86400000) + 1;
+  return Math.max(1, Math.floor((new Date() - getJoinDate()) / 86400000) + 1);
 }
 function getDayInfo(n) {
   const wi = Math.floor((n-1)/7), di = (n-1)%7;
@@ -832,8 +837,8 @@ function buildWeeksAccordion() {
       const isLocked = globalDay > dayNum;
       const key = `${wi}-${di}`;
       const done = prayed[key];
-      const dayDate = new Date(JOIN_DATE);
-      dayDate.setDate(JOIN_DATE.getDate() + wi*7 + di);
+      const dayDate = new Date(getJoinDate());
+      dayDate.setDate(getJoinDate().getDate() + wi*7 + di);
       const row = document.createElement('div');
       row.className = 'day-row'+(isToday?' today-row':'')+(done?' done-row':'')+(isLocked?' locked':'');
       row.innerHTML = `
@@ -859,8 +864,8 @@ function openPrayer(wi, di) {
   const key = `${wi}-${di}`;
   const done = prayed[key];
   modalWeek = wi; modalDay = di;
-  const dayDate = new Date(JOIN_DATE);
-  dayDate.setDate(JOIN_DATE.getDate() + wi*7 + di);
+  const dayDate = new Date(getJoinDate());
+  dayDate.setDate(getJoinDate().getDate() + wi*7 + di);
   document.getElementById('modalTitle').textContent = day.title;
   document.getElementById('modalSub').textContent = formatDate(dayDate);
   document.getElementById('modalWeekTag').textContent = `Week ${wi+1} · ${week.theme} · ${week.angel}`;
@@ -941,8 +946,7 @@ function showStreakToast() {
   if (localStorage.getItem('ap_streak_seen') === today) return;
   localStorage.setItem('ap_streak_seen', today);
 
-  const joinDate = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
-  const dayNum = Math.max(1, Math.floor((new Date() - joinDate) / 86400000) + 1);
+  const dayNum = getDayNumber();
 
   // Título
   const titles = {
