@@ -17,7 +17,6 @@ async function callGemini(apiKey, payload, retries = 3) {
   let lastError;
   for (let attempt = 0; attempt < retries; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 1s, 2s
       await new Promise(r => setTimeout(r, attempt * 1000));
     }
     let res;
@@ -39,7 +38,6 @@ async function callGemini(apiKey, payload, retries = 3) {
       continue;
     }
 
-    // Retry on rate limit or server errors
     if (res.status === 429 || res.status >= 500) {
       lastError = new Error(`Gemini ${res.status}: ${JSON.stringify(data).slice(0, 120)}`);
       continue;
@@ -60,10 +58,11 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
+    
+    // FIX 1: O chatHistory não estava sendo extraído! Agora ele pega do frontend.
     const { history = [], chatHistory = [], userName = 'dear one', email = '', memory = '' } = body;
     if (!history.length) return json({ error: 'Message required' }, 400);
 
-    // Last user message in history — used for memory update
     const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
     const message = lastUserMsg?.parts?.[0]?.text || '';
 
@@ -127,8 +126,6 @@ Help them recognize envy directed at them and spiritual attacks. Psalm 91, Isaia
 
 MEMORY: ${memorySection}`;
 
-    // Gemini requires contents to start with a 'user' turn and alternate roles.
-    // Strip any leading model turns defensively.
     const contents = history.filter(Boolean);
     while (contents.length && contents[0].role !== 'user') contents.shift();
 
@@ -152,7 +149,6 @@ MEMORY: ${memorySection}`;
     if (replyText) {
       reply = replyText;
     } else if (finishReason === 'SAFETY') {
-      // Safety-filtered: retry with a softer framing
       console.warn('Safety filter triggered for message:', message.slice(0, 60));
       try {
         const retryData = await callGemini(apiKey, {
@@ -167,7 +163,6 @@ MEMORY: ${memorySection}`;
     }
 
     if (!reply) {
-      // Last-resort: ask Gemini for a warm greeting without the original message
       try {
         const fallbackData = await callGemini(apiKey, {
           system_instruction: { parts: [{ text: systemPrompt }] },
@@ -184,9 +179,16 @@ MEMORY: ${memorySection}`;
       reply = 'I am here with you. Whatever is in your heart right now — bring it to me. What is happening?';
     }
 
-    // Update memory + chat_history in Supabase (best-effort, non-blocking)
+    // FIX 2: Adiciona a resposta do Gabriel ao array antes de salvar no banco
+    const updatedChatHistory = [...chatHistory];
+    updatedChatHistory.push({
+      role: 'angel',
+      text: reply,
+      time: new Date().toISOString()
+    });
+
     if (email && process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-      updateUserData(apiKey, email, message, memory, chatHistory).catch(e =>
+      updateUserData(apiKey, email, message, memory, updatedChatHistory).catch(e =>
         console.error('User data update failed:', e.message)
       );
     }
