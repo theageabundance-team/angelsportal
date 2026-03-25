@@ -359,8 +359,13 @@ let done = JSON.parse(localStorage.getItem('ap_rituals')||'{}');
 let modalIdx = 0;
 
 // Day 1-indexed from join date real do cadastro
-const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
-function getDayNum() { return Math.min(Math.floor((new Date()-JOIN_DATE)/86400000)+1, 15); }
+function getJoinDate() {
+  const raw = localStorage.getItem('ap_joined');
+  if (!raw) return new Date(); // sem data = dia 1
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+function getDayNum() { return Math.max(1, Math.min(Math.floor((new Date()-getJoinDate())/86400000)+1, 15)); }
 function formatDate(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric'}); }
 
 window.addEventListener('load',()=>{
@@ -394,7 +399,7 @@ function buildList(){
   list.innerHTML='';
   RITUALS.forEach((r,i)=>{
     const isToday=i===day-1, isLocked=i>day-1, isDone=done[i];
-    const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+i);
+    const dd=new Date(getJoinDate()); dd.setDate(getJoinDate().getDate()+i);
     const card=document.createElement('div');
     card.className='ritual-card'+(isDone?' done-card':'')+(isToday?' today-card-item':'')+(isLocked?' locked':'');
     card.innerHTML=`
@@ -417,7 +422,7 @@ function openTodayRitual(){ openRitual(getDayNum()-1); }
 function openRitual(idx){
   const r=RITUALS[idx]; const isDone=done[idx];
   modalIdx=idx;
-  const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+idx);
+  const dd=new Date(getJoinDate()); dd.setDate(getJoinDate().getDate()+idx);
   document.getElementById('modalNum').textContent=r.num;
   document.getElementById('modalTitle').textContent=r.name;
   document.getElementById('modalSub').textContent=`Day ${idx+1} · ${formatDate(dd)}`;
