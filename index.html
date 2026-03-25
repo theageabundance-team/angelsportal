@@ -973,14 +973,31 @@ function showStreakToast() {
   document.getElementById('toastTitle').textContent = titles[dayNum] || `${dayNum}-day streak! 🔥`;
   document.getElementById('toastSub').textContent = subs[dayNum] || defaultSubs[dayNum % defaultSubs.length];
 
-  // Dots — mostra 7, compactos
+  // Dots — sempre 7, com janela deslizante centrada no dia atual
+  const GIFT_DAYS = [3, 7, 14, 21, 30];
   const dotsEl = document.getElementById('toastDots');
   dotsEl.innerHTML = '';
-  const show = Math.min(7, Math.max(dayNum + 1, 4));
-  for (let i = 1; i <= show; i++) {
+  // Janela de 7 dias: mostra os 4 anteriores, o hoje, e 2 futuros
+  const windowStart = Math.max(1, dayNum - 4);
+  const windowEnd = windowStart + 6;
+  for (let i = windowStart; i <= windowEnd; i++) {
     const d = document.createElement('div');
-    d.className = 'toast-dot' + (i < dayNum ? ' done' : i === dayNum ? ' today' : '');
-    d.textContent = i < dayNum ? '✦' : i;
+    const isGiftDay = GIFT_DAYS.includes(i);
+    const isPast = i < dayNum;
+    const isToday = i === dayNum;
+    d.className = 'toast-dot' + (isPast ? ' done' : isToday ? ' today' : '');
+    if (isToday && isGiftDay) {
+      d.textContent = '🎁';
+      d.style.fontSize = '14px';
+    } else if (isPast) {
+      d.textContent = isGiftDay ? '✦' : '✦';
+    } else if (isGiftDay) {
+      d.textContent = '🎁';
+      d.style.fontSize = '13px';
+      d.style.opacity = '0.45';
+    } else {
+      d.textContent = i;
+    }
     dotsEl.appendChild(d);
   }
 
