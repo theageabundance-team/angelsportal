@@ -12,14 +12,22 @@ export default async function handler(req) {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
   }
 
   try {
-    const { email, name } = await req.json();
+    const body = await req.json();
+    const email = body.email || '';
+    const name = body.name || '';
 
     if (!email || !name) {
-      return new Response(JSON.stringify({ error: 'Email and name required' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Email and name required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -27,11 +35,11 @@ export default async function handler(req) {
 
     // Check if user exists
     const checkRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=*`,
+      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email) + '&select=*',
       {
         headers: {
           'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+          'Authorization': 'Bearer ' + SUPABASE_KEY
         }
       }
     );
@@ -39,35 +47,21 @@ export default async function handler(req) {
     const existing = await checkRes.json();
 
     if (existing && existing.length > 0) {
-      // User exists — return their profile
       const user = existing[0];
-      return new Response(JSON.stringify({
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          angel: user.angel,
-          memory: user.memory,
-          streak: user.streak,
-          prayers_done: user.prayers_done,
-          rituals_done: user.rituals_done,
-          created_at: user.created_at
-        },
-        isNew: false
-      }), {
+      return new Response(JSON.stringify({ user, isNew: false }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // New user — create profile
+    // Create new user
     const createRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/users`,
+      SUPABASE_URL + '/rest/v1/users',
       {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
@@ -84,28 +78,18 @@ export default async function handler(req) {
       }
     );
 
-    const newUser = await createRes.json();
-    const user = Array.isArray(newUser) ? newUser[0] : newUser;
+    const created = await createRes.json();
+    const user = Array.isArray(created) ? created[0] : created;
 
-    return new Response(JSON.stringify({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        angel: user.angel,
-        memory: user.memory,
-        streak: user.streak,
-        prayers_done: user.prayers_done,
-        rituals_done: user.rituals_done,
-        created_at: user.created_at
-      },
-      isNew: true
-    }), {
+    return new Response(JSON.stringify({ user, isNew: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }
