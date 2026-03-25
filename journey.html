@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#080412">
+<title>Angels Portal — Your Journey</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg:         #080412;
+  --bg-mid:     #100820;
+  --bg-card:    #130a28;
+  --bg-inner:   #0c0618;
+  --bg-nav:     rgba(8,4,18,0.97);
+  /* Purple — atmosphere & structure */
+  --violet:     #7c4ddd;
+  --violet-lt:  #a87aff;
+  --violet-br:  #c4a0ff;
+  --violet-pale:#ede0ff;
+  --violet-dim: rgba(124,77,221,0.22);
+  --violet-glow:rgba(124,77,221,0.08);
+  /* Gold — accents, highlights, actions */
+  --gold:       #d4a017;
+  --gold-lt:    #f0c040;
+  --gold-br:    #ffd460;
+  --gold-pale:  #faedc4;
+  --gold-dim:   rgba(212,160,23,0.22);
+  --text:       #ede8f8;
+  --text-dim:   rgba(237,232,248,0.6);
+  --radius-lg:  24px; --radius-md:18px; --radius-sm:14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Lora', Georgia, serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 100px;
+}
+
+/* Deep space atmosphere */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(100,50,200,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 100%, rgba(60,20,120,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 60%, rgba(80,30,160,0.08) 0%, transparent 50%);
+}
+
+/* Star field */
+.stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.star {
+  position:absolute; border-radius:50%; background:var(--violet-pale);
+  animation:twinkle var(--d) ease-in-out infinite var(--delay); opacity:var(--op);
+}
+@keyframes twinkle { 0%,100%{opacity:var(--op)} 50%{opacity:0.04} }
+
+/* Nebula wisps */
+.nebula {
+  position:fixed; border-radius:50%; pointer-events:none; z-index:0;
+  animation: drift var(--nd) ease-in-out infinite alternate var(--ndelay);
+  filter: blur(40px);
+}
+@keyframes drift { from{transform:translate(0,0) scale(1)} to{transform:translate(var(--nx),var(--ny)) scale(1.1)} }
+
+/* Topnav */
+.topnav { position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--bg-nav); backdrop-filter:blur(20px); border-bottom:1px solid var(--gold-dim); }
+.nav-logo { font-family:'Cinzel',serif; font-size:18px; font-weight:600; color:var(--gold-lt); letter-spacing:0.07em; display:flex; align-items:center; gap:10px; }
+.nav-avatar { width:44px; height:44px; border-radius:50%; background:rgba(212,160,23,0.1); border:1.5px solid var(--gold-dim); display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:16px; font-weight:600; color:var(--gold-lt); }
+
+/* Journey hero */
+.journey-hero {
+  position:relative; z-index:5;
+  padding:36px 24px 28px; text-align:center;
+  border-bottom:1px solid var(--violet-dim);
+}
+.journey-hero::before {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-br),transparent); opacity:0.4;
+}
+.angel-orbit {
+  width:90px; height:90px; border-radius:50%;
+  border:1.5px solid var(--gold);
+  background:var(--bg-inner);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 20px; font-size:36px; position:relative;
+  box-shadow: 0 0 40px rgba(212,160,23,0.2), inset 0 0 20px rgba(124,77,221,0.1);
+}
+.angel-orbit::before {
+  content:''; position:absolute; inset:-10px; border-radius:50%;
+  border:1px solid var(--gold-dim);
+  animation:orbit-pulse 4s ease-in-out infinite;
+}
+.angel-orbit::after {
+  content:''; position:absolute; inset:-22px; border-radius:50%;
+  border:1px solid rgba(212,160,23,0.08);
+  animation:orbit-pulse 4s ease-in-out infinite 1s;
+}
+@keyframes orbit-pulse { 0%,100%{opacity:0.6;transform:scale(1)} 50%{opacity:0.15;transform:scale(1.06)} }
+.journey-title { font-family:'Cinzel',serif; font-size:24px; font-weight:600; color:var(--gold-pale); letter-spacing:0.05em; margin-bottom:8px; }
+.journey-sub { font-size:16px; color:var(--text-dim); line-height:1.65; max-width:280px; margin:0 auto; }
+
+/* Big streak display */
+.streak-display {
+  position:relative; z-index:5; margin:24px 16px 0;
+  background:var(--bg-card); border:1px solid var(--gold-dim);
+  border-radius:var(--radius-lg); padding:28px 24px; text-align:center; overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(124,77,221,0.15);
+}
+.streak-display::before {
+  content:''; position:absolute; top:0; left:5%; right:5%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-br),transparent); opacity:0.45;
+}
+/* Glow behind number */
+.streak-display::after {
+  content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-60%);
+  width:160px; height:160px; border-radius:50%;
+  background:radial-gradient(circle, rgba(124,77,221,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+.streak-number { font-family:'Cinzel',serif; font-size:80px; font-weight:700; color:var(--gold-lt); line-height:1; margin-bottom:6px; text-shadow:0 0 60px rgba(212,160,23,0.4); position:relative; z-index:1; }
+.streak-label { font-family:'Cinzel',serif; font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); margin-bottom:20px; }
+.streak-days { display:flex; justify-content:center; gap:7px; flex-wrap:wrap; }
+.streak-day { width:38px; height:38px; border-radius:50%; border:1.5px solid var(--violet-dim); display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:12px; color:var(--text-dim); transition:all 0.3s; }
+.streak-day.done { background:linear-gradient(135deg,var(--gold),var(--gold-br)); border-color:var(--gold); color:#1a0f00; font-weight:700; box-shadow:0 0 12px rgba(212,160,23,0.4); }
+.streak-day.today { border-color:var(--gold-lt); color:var(--gold-lt); box-shadow:0 0 0 3px rgba(212,160,23,0.2); animation:today-glow 2s ease-in-out infinite; }
+@keyframes today-glow { 0%,100%{box-shadow:0 0 0 3px rgba(212,160,23,0.2)} 50%{box-shadow:0 0 0 5px rgba(212,160,23,0.08)} }
+
+/* Section header */
+.section-header { font-family:'Cinzel',serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); padding:28px 20px 14px; position:relative; z-index:5; display:flex; align-items:center; gap:10px; }
+.section-header::after { content:''; flex:1; height:1px; background:var(--gold-dim); }
+
+/* Unlock cards */
+.unlocks-grid { display:flex; flex-direction:column; gap:12px; padding:0 16px; position:relative; z-index:5; }
+
+.unlock-card {
+  border-radius:var(--radius-lg); border:1px solid var(--violet-dim);
+  background:var(--bg-card);
+  padding:22px 20px;
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:16px;
+  transition:transform 0.18s, border-color 0.3s;
+}
+.unlock-card.unlocked { cursor:pointer; border-color:rgba(124,77,221,0.4); box-shadow:0 4px 24px rgba(0,0,0,0.3); }
+.unlock-card.unlocked:active { transform:scale(0.98); }
+.unlock-card.locked { opacity:0.55; }
+
+/* Top accent line per card */
+.unlock-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
+.unlock-card:nth-child(1)::before { background:linear-gradient(90deg,#7c4ddd,#c4a0ff); }
+.unlock-card:nth-child(2)::before { background:linear-gradient(90deg,#4d7cdd,#a0c4ff); }
+.unlock-card:nth-child(3)::before { background:linear-gradient(90deg,#3aaa8a,#6de0c0); }
+.unlock-card:nth-child(4)::before { background:linear-gradient(90deg,#dd7c4d,#ffc4a0); opacity:0.5; }
+.unlock-card:nth-child(5)::before { background:linear-gradient(90deg,#c47a1e,#f0c040); opacity:0.5; }
+
+/* Glow for unlocked cards */
+.unlock-card.unlocked::after {
+  content:''; position:absolute; inset:0; border-radius:var(--radius-lg);
+  background:radial-gradient(ellipse at 0% 50%, rgba(124,77,221,0.06) 0%, transparent 60%);
+  pointer-events:none;
+}
+
+.unlock-icon { width:60px; height:60px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; position:relative; }
+.unlock-card.unlocked .unlock-icon { box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+
+.unlock-info { flex:1; }
+.unlock-days { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:5px; }
+.unlock-card.unlocked .unlock-days { color:var(--gold-lt); }
+.unlock-card.locked   .unlock-days { color:var(--text-dim); }
+.unlock-title { font-family:'Cinzel',serif; font-size:16px; font-weight:600; color:var(--text); margin-bottom:5px; line-height:1.3; }
+.unlock-desc { font-size:14px; color:var(--text-dim); line-height:1.6; }
+
+.unlock-badge { flex-shrink:0; display:flex; align-items:center; }
+.badge-unlocked {
+  background:linear-gradient(135deg,var(--gold),var(--gold-lt));
+  border-radius:20px; padding:6px 14px;
+  font-family:'Cinzel',serif; font-size:10px; font-weight:700;
+  color:#1a0f00; letter-spacing:0.08em; white-space:nowrap;
+  box-shadow:0 3px 12px rgba(212,160,23,0.4);
+}
+.badge-locked {
+  background:var(--bg-inner); border:1px solid var(--violet-dim);
+  border-radius:20px; padding:6px 12px;
+  font-family:'Cinzel',serif; font-size:10px; color:var(--text-dim);
+  letter-spacing:0.06em; white-space:nowrap;
+}
+
+/* Locked overlay hint */
+.lock-progress {
+  margin-top:8px; display:flex; align-items:center; gap:8px;
+}
+.lock-bar { flex:1; height:3px; background:rgba(124,77,221,0.1); border-radius:2px; overflow:hidden; }
+.lock-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold-br)); border-radius:2px; }
+.lock-pct { font-family:'Cinzel',serif; font-size:10px; color:var(--text-dim); letter-spacing:0.05em; }
+
+/* Bottom nav */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; display:flex; background:var(--bg-nav); backdrop-filter:blur(20px); border-top:1px solid var(--gold-dim); padding:8px 0 max(18px,env(safe-area-inset-bottom)); }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:10px 0; min-height:56px; justify-content:center; }
+.nav-item:active { opacity:0.7; }
+.nav-item-icon { font-size:24px; }
+.nav-item-label { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+.nav-item.active .nav-item-label { color:var(--gold-lt); font-weight:600; }
+.nav-item.active .nav-item-icon { filter:drop-shadow(0 0 8px rgba(212,160,23,0.6)); }
+.nav-item.active::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--gold); margin-top:2px; }
+
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- Nebula wisps -->
+<div class="nebula" style="width:300px;height:300px;top:-80px;left:-80px;background:rgba(80,30,180,0.07);--nd:12s;--ndelay:0s;--nx:30px;--ny:20px"></div>
+<div class="nebula" style="width:250px;height:250px;bottom:100px;right:-60px;background:rgba(60,20,140,0.06);--nd:15s;--ndelay:3s;--nx:-20px;--ny:-30px"></div>
+<div class="nebula" style="width:200px;height:200px;top:40%;left:30%;background:rgba(100,40,200,0.04);--nd:18s;--ndelay:6s;--nx:15px;--ny:25px"></div>
+
+<!-- Topnav -->
+<div class="topnav">
+  <div class="nav-logo"><span>✦</span> Your Journey</div>
+  <div class="nav-avatar">A</div>
+</div>
+
+<!-- Hero -->
+<div class="journey-hero">
+  <div class="angel-orbit">✦</div>
+  <div class="journey-title">Your Connection with Raphael</div>
+  <div class="journey-sub">Every day you return, your bond with your angel grows stronger.</div>
+</div>
+
+<!-- Streak -->
+<div class="streak-display">
+  <div class="streak-number">7</div>
+  <div class="streak-label">Days of Connection</div>
+  <div class="streak-days" id="streakDays"></div>
+</div>
+
+<!-- Unlocks -->
+<div class="section-header">Sacred Gifts from Raphael</div>
+<div class="unlocks-grid">
+
+  <div class="unlock-card unlocked">
+    <div class="unlock-icon" style="background:rgba(124,77,221,0.15)">🌙</div>
+    <div class="unlock-info">
+      <div class="unlock-days">3 Days — Unlocked</div>
+      <div class="unlock-title">Dream Interpretation</div>
+      <div class="unlock-desc">Raphael decodes the symbols in your dreams and reveals hidden messages from Heaven.</div>
+    </div>
+    <div class="unlock-badge"><div class="badge-unlocked">Open ›</div></div>
+  </div>
+
+  <div class="unlock-card unlocked">
+    <div class="unlock-icon" style="background:rgba(77,124,221,0.15)">🔮</div>
+    <div class="unlock-info">
+      <div class="unlock-days">7 Days — Unlocked</div>
+      <div class="unlock-title">Your Angel's Personal Letter</div>
+      <div class="unlock-desc">A unique message addressed only to you, about your current moment in life.</div>
+    </div>
+    <div class="unlock-badge"><div class="badge-unlocked">Open ›</div></div>
+  </div>
+
+  <div class="unlock-card unlocked">
+    <div class="unlock-icon" style="background:rgba(58,170,138,0.15)">🌿</div>
+    <div class="unlock-info">
+      <div class="unlock-days">14 Days — Unlocked</div>
+      <div class="unlock-title">The Sacred Name Ritual</div>
+      <div class="unlock-desc">A powerful ritual using your angel's true name to call in protection and abundance.</div>
+    </div>
+    <div class="unlock-badge"><div class="badge-unlocked">Open ›</div></div>
+  </div>
+
+  <div class="unlock-card locked">
+    <div class="unlock-icon" style="background:rgba(221,124,77,0.1)">🕯️</div>
+    <div class="unlock-info">
+      <div class="unlock-days">21 Days — Locked</div>
+      <div class="unlock-title">Candlelight Healing Ceremony</div>
+      <div class="unlock-desc">A guided 21-minute ceremony to release grief, fear and spiritual blockages.</div>
+      <div class="lock-progress">
+        <div class="lock-bar"><div class="lock-fill" style="width:33%"></div></div>
+        <div class="lock-pct">7 / 21 days</div>
+      </div>
+    </div>
+    <div class="unlock-badge"><div class="badge-locked">🔒 14 more</div></div>
+  </div>
+
+  <div class="unlock-card locked">
+    <div class="unlock-icon" style="background:rgba(196,122,30,0.1)">👁️</div>
+    <div class="unlock-info">
+      <div class="unlock-days">30 Days — Locked</div>
+      <div class="unlock-title">The Angel's Prophecy</div>
+      <div class="unlock-desc">Raphael reveals a spiritual vision for the next chapter of your life.</div>
+      <div class="lock-progress">
+        <div class="lock-bar"><div class="lock-fill" style="width:23%"></div></div>
+        <div class="lock-pct">7 / 30 days</div>
+      </div>
+    </div>
+    <div class="unlock-badge"><div class="badge-locked">🔒 23 more</div></div>
+  </div>
+
+</div>
+
+<div style="height:24px"></div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='index.html'"><div class="nav-item-icon">🏛️</div><div class="nav-item-label">Home</div></div>
+  <div class="nav-item" onclick="window.location.href='chat.html'"><div class="nav-item-icon">💬</div><div class="nav-item-label">Chat</div></div>
+  <div class="nav-item active"><div class="nav-item-icon">🔥</div><div class="nav-item-label">Journey</div></div>
+  <div class="nav-item" onclick="window.location.href='prayers.html'"><div class="nav-item-icon">🕯️</div><div class="nav-item-label">Prayers</div></div>
+</div>
+
+<script>
+// Stars
+const el = document.getElementById('stars');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  const sz = Math.random() < 0.1 ? 3 : Math.random() < 0.3 ? 2 : 1;
+  s.className = 'star';
+  s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*6}s;--delay:${Math.random()*6}s;--op:${0.15+Math.random()*0.6}`;
+  el.appendChild(s);
+}
+
+// Streak days
+const daysEl = document.getElementById('streakDays');
+for (let i = 1; i <= 10; i++) {
+  const d = document.createElement('div');
+  d.className = 'streak-day' + (i < 7 ? ' done' : i === 7 ? ' today' : '');
+  d.textContent = i < 7 ? '✦' : i;
+  daysEl.appendChild(d);
+}
+</script>
+</body>
+</html>

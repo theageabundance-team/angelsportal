@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a0a08">
+<title>Angels Portal — Sacred Prayers</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  /* Prayers palette — celestial sky */
+  --bg:        #05101e;
+  --bg-mid:    #081828;
+  --bg-card:   #0a1e32;
+  --bg-inner:  #061420;
+  --bg-nav:    rgba(5,16,30,0.96);
+  --sky:       #2e8bc0;
+  --sky-lt:    #5ab0e0;
+  --sky-br:    #88ccf0;
+  --sky-pale:  #d0eefa;
+  --sky-dim:   rgba(46,139,192,0.22);
+  --sky-glow:  rgba(46,139,192,0.08);
+  --gold:      #d4a017;
+  --gold-lt:   #f0c040;
+  --gold-br:   #ffd460;
+  --gold-pale: #faedc4;
+  --gold-dim:  rgba(212,160,23,0.22);
+  --text:      #e8f4fc;
+  --text-dim:  rgba(232,244,252,0.6);
+  --radius-lg: 24px; --radius-md:18px; --radius-sm:14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Lora', Georgia, serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 100px;
+}
+
+/* Celestial sky atmosphere */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(30,100,180,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 60%, rgba(20,80,140,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 100%, rgba(10,60,120,0.08) 0%, transparent 50%);
+}
+
+/* Floating light motes */
+.embers { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.ember {
+  position:absolute; border-radius:50%;
+  background:var(--sky-br);
+  animation: float-up var(--ed) ease-in-out infinite var(--edelay);
+  opacity:0;
+}
+@keyframes float-up {
+  0%   { opacity:0; transform:translateY(0) scale(1); }
+  15%  { opacity:var(--eop); }
+  85%  { opacity:var(--eop); }
+  100% { opacity:0; transform:translateY(-80px) scale(0.4); }
+}
+
+/* Shimmer */
+.shimmer-overlay { position:fixed; inset:0; z-index:998; pointer-events:none; background:radial-gradient(ellipse at center, rgba(46,139,192,0.18) 0%, transparent 70%); opacity:0; transition:opacity 0.4s; }
+.shimmer-overlay.active { opacity:1; }
+
+/* Celebration */
+.celebration { position:fixed; inset:0; z-index:500; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity 0.5s ease; background:rgba(18,7,4,0.95); }
+.celebration.active { opacity:1; pointer-events:all; }
+.celebration-ring { width:120px; height:120px; border-radius:50%; border:2px solid var(--sky); background:var(--bg-inner); display:flex; align-items:center; justify-content:center; font-size:48px; position:relative; box-shadow:0 0 40px rgba(201,122,34,0.3); }
+.celebration.active .celebration-ring { animation:ring-expand 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes ring-expand { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
+.celebration-ring::before { content:''; position:absolute; inset:-12px; border-radius:50%; border:1px solid var(--sky-dim); animation:ring-pulse-big 2s ease-in-out infinite; }
+.celebration-ring::after  { content:''; position:absolute; inset:-24px; border-radius:50%; border:1px solid rgba(46,139,192,0.08); animation:ring-pulse-big 2s ease-in-out infinite 0.3s; }
+@keyframes ring-pulse-big { 0%,100%{opacity:0.6;transform:scale(1)} 50%{opacity:0.1;transform:scale(1.08)} }
+.celebration-heard { font-family:'Cinzel',serif; font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:var(--sky-lt); margin-top:32px; margin-bottom:12px; opacity:0; }
+.celebration.active .celebration-heard { animation:fade-up-cel 0.5s ease 0.4s forwards; }
+.celebration-message { font-family:'Cinzel',serif; font-size:26px; font-weight:600; color:var(--text); text-align:center; line-height:1.4; padding:0 32px; opacity:0; max-width:340px; }
+.celebration.active .celebration-message { animation:fade-up-cel 0.5s ease 0.55s forwards; }
+.celebration-angel { font-size:16px; color:var(--sky-lt); margin-top:10px; font-style:italic; opacity:0; text-align:center; }
+.celebration.active .celebration-angel { animation:fade-up-cel 0.5s ease 0.7s forwards; }
+@keyframes fade-up-cel { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.particles { position:fixed; inset:0; pointer-events:none; z-index:501; opacity:0; transition:opacity 0.3s; }
+.particles.active { opacity:1; }
+.particle { position:absolute; width:4px; height:4px; border-radius:50%; background:var(--sky-br); animation:particle-fly var(--pd) ease-out forwards var(--pdelay); opacity:0; }
+.particle.star-shape { width:8px; height:8px; background:none; font-size:12px; display:flex; align-items:center; justify-content:center; }
+@keyframes particle-fly { 0%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(var(--px),var(--py)) scale(0.2)} }
+
+/* Topnav */
+.topnav { position:sticky; top:0; z-index:100; display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--bg-nav); backdrop-filter:blur(20px); border-bottom:1px solid var(--sky-dim); }
+.back-btn { width:40px; height:40px; border-radius:50%; background:var(--bg-card); border:1px solid var(--sky-dim); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--sky-lt); flex-shrink:0; }
+.back-btn:active { transform:scale(0.9); }
+.nav-center { flex:1; }
+.nav-title { font-family:'Cinzel',serif; font-size:16px; font-weight:600; color:var(--gold-lt); letter-spacing:0.06em; }
+.nav-sub { font-size:13px; color:var(--text-dim); margin-top:1px; }
+
+/* Today hero — like a lit altar */
+.today-hero { position:relative; z-index:5; margin:20px 16px 0; }
+.today-card {
+  padding:28px 24px 24px;
+  border:1px solid rgba(46,139,192,0.3);
+  background: linear-gradient(160deg, #0a2040 0%, #061428 60%, #081830 100%);
+  border-radius:var(--radius-lg); position:relative; overflow:hidden; cursor:pointer;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,122,34,0.2);
+}
+.today-card:active { transform:scale(0.985); }
+/* Candle glow at top */
+.today-card::before {
+  content:''; position:absolute; top:-30px; left:50%; transform:translateX(-50%);
+  width:200px; height:100px; border-radius:50%;
+  background:radial-gradient(ellipse, rgba(46,139,192,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+/* Shimmer line */
+.today-card::after {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(138,204,240,0.5), transparent);
+}
+.today-badge { display:inline-flex; align-items:center; gap:7px; background:rgba(46,139,192,0.12); border:1px solid rgba(46,139,192,0.25); border-radius:20px; padding:5px 14px; font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.12em; color:var(--gold-lt); text-transform:uppercase; margin-bottom:16px; }
+.today-dot { width:7px; height:7px; border-radius:50%; background:var(--sky-br); animation:flicker 1.5s ease-in-out infinite; }
+@keyframes flicker { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.8)} }
+.today-date { font-family:'Cinzel',serif; font-size:13px; color:rgba(245,237,224,0.45); letter-spacing:0.1em; margin-bottom:6px; text-transform:uppercase; }
+.today-title { font-family:'Cinzel',serif; font-size:24px; font-weight:600; color:var(--gold-pale); letter-spacing:0.03em; line-height:1.3; margin-bottom:6px; }
+.today-week-theme { font-size:15px; color:rgba(245,237,224,0.55); margin-bottom:22px; font-style:italic; }
+.today-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  background:linear-gradient(160deg, #f0c040 0%, #d4a017 50%, #b8860b 100%);
+  color:#1a0f00; font-family:'Cinzel',serif; font-size:15px; font-weight:700;
+  letter-spacing:0.09em; padding:17px; border-radius:14px; border:none; cursor:pointer;
+  box-shadow:0 4px 24px rgba(212,160,23,0.4), 0 1px 0 rgba(255,220,100,0.4) inset;
+  transition:transform 0.15s; position:relative; overflow:hidden;
+}
+.today-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background:rgba(255,255,255,0.08); border-radius:14px 14px 0 0; }
+.today-btn:active { transform:scale(0.97); }
+.today-btn.done { background:linear-gradient(135deg,#2a6a3a,#1a4a28); box-shadow:0 4px 18px rgba(42,106,58,0.4); color:#c0ffd0; }
+.today-deco { position:absolute; right:-10px; bottom:-10px; font-size:100px; opacity:0.05; pointer-events:none; color:var(--sky); line-height:1; font-family:'Cinzel',serif; }
+
+/* Progress */
+.progress-wrap { position:relative; z-index:5; margin:16px 16px 0; }
+.progress-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.progress-lbl { font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--sky); }
+.progress-val { font-family:'Cinzel',serif; font-size:13px; font-weight:600; color:var(--gold-lt); }
+.progress-bar { height:5px; background:var(--bg-inner); border-radius:3px; overflow:hidden; border:1px solid var(--sky-dim); }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold-br)); border-radius:3px; transition:width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* Section header */
+.section-header { font-family:'Cinzel',serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold-lt); padding:24px 20px 12px; position:relative; z-index:5; display:flex; align-items:center; gap:10px; }
+.section-header::after { content:''; flex:1; height:1px; background:var(--sky-dim); }
+
+/* Week blocks */
+.week-block { position:relative; z-index:5; margin:0 16px 12px; }
+.week-header { display:flex; align-items:center; gap:14px; padding:18px 20px; border-radius:var(--radius-lg) var(--radius-lg) 0 0; border:1px solid var(--sky-dim); border-bottom:none; cursor:pointer; transition:background 0.3s; background:linear-gradient(135deg,rgba(46,139,192,0.08),var(--bg-card)); }
+.week-block:not(.open) .week-header { border-radius:var(--radius-lg); border-bottom:1px solid var(--sky-dim); }
+.week-block.color-crimson .week-header { background:linear-gradient(135deg,rgba(140,30,20,0.15),var(--bg-card)); border-color:rgba(180,60,40,0.25); }
+.week-block.color-crimson:not(.open) .week-header { border-color:rgba(180,60,40,0.25); }
+.week-num-badge { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:15px; font-weight:700; flex-shrink:0; }
+.color-amber .week-num-badge { background:rgba(201,122,34,0.15); border:1px solid var(--sky-dim); color:var(--amber-lt); }
+.color-crimson .week-num-badge { background:rgba(180,60,40,0.15); border:1px solid rgba(180,60,40,0.3); color:#f0907a; }
+.week-info { flex:1; }
+.week-tag { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:3px; }
+.color-sky .week-tag { color:var(--gold); }
+.color-crimson .week-tag { color:var(--gold); }
+.week-name { font-family:'Cinzel',serif; font-size:16px; font-weight:600; color:var(--gold-pale); }
+.week-chevron { font-size:20px; color:var(--text-dim); transition:transform 0.3s; }
+.week-block.open .week-chevron { transform:rotate(90deg); }
+.week-days { border:1px solid var(--sky-dim); border-top:none; border-radius:0 0 var(--radius-lg) var(--radius-lg); overflow:hidden; display:none; }
+.week-block.color-crimson .week-days { border-color:rgba(180,60,40,0.25); }
+.week-block.open .week-days { display:block; }
+.day-row { display:flex; align-items:center; gap:14px; padding:16px 20px; cursor:pointer; border-bottom:1px solid var(--amber-dim); background:var(--bg-card); transition:background 0.2s; position:relative; overflow:hidden; }
+.week-block.color-crimson .day-row { border-color:rgba(180,60,40,0.2); }
+.day-row:last-child { border-bottom:none; }
+.day-row:active { background:var(--bg-inner); }
+.day-row.today-row { background:linear-gradient(135deg,rgba(46,139,192,0.08),var(--bg-card)); }
+.day-row.today-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg,var(--sky),var(--sky-br)); }
+.day-row.locked { opacity:0.35; cursor:not-allowed; }
+.day-circle { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:14px; font-weight:600; flex-shrink:0; border:1.5px solid var(--amber-dim); color:var(--text-dim); background:var(--bg-inner); }
+.day-row.done-row .day-circle { background:linear-gradient(135deg,var(--gold),var(--gold-br)); border-color:transparent; color:#1a0f00; }
+.day-row.today-row .day-circle { border-color:var(--sky-lt); color:var(--sky-lt); box-shadow:0 0 0 3px rgba(46,139,192,0.15); }
+.day-info { flex:1; }
+.day-date { font-size:12px; color:rgba(212,160,23,0.55); font-family:'Cinzel',serif; letter-spacing:0.06em; margin-bottom:2px; }
+.day-title { font-family:'Cinzel',serif; font-size:15px; font-weight:600; color:var(--gold-pale); }
+.day-row.locked .day-title { color:var(--text-dim); }
+.day-status { font-size:18px; flex-shrink:0; }
+
+/* Prayer modal */
+.prayer-modal { position:fixed; inset:0; z-index:200; overflow-y:auto; transform:translateY(100%); transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); background:var(--bg); }
+.prayer-modal.open { transform:translateY(0); }
+/* Warm glow behind text */
+.prayer-modal::before { content:''; position:fixed; top:0; left:0; right:0; height:300px; background:radial-gradient(ellipse 80% 60% at 50% -20%, rgba(180,80,20,0.15) 0%, transparent 70%); pointer-events:none; z-index:0; }
+.modal-topnav { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--bg-nav); backdrop-filter:blur(20px); border-bottom:1px solid var(--sky-dim); }
+.modal-close { width:40px; height:40px; border-radius:50%; background:var(--bg-card); border:1px solid var(--sky-dim); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--sky-lt); flex-shrink:0; }
+.modal-close:active { transform:scale(0.9); }
+.modal-title-wrap { flex:1; }
+.modal-title { font-family:'Cinzel',serif; font-size:15px; font-weight:600; color:var(--sky-lt); letter-spacing:0.04em; }
+.modal-sub { font-size:13px; color:var(--text-dim); margin-top:1px; }
+.modal-body { padding:28px 24px; position:relative; z-index:1; }
+.modal-week-tag { font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--sky-lt); margin-bottom:8px; }
+.modal-prayer-title { font-family:'Cinzel',serif; font-size:26px; font-weight:600; color:var(--sky-pale); line-height:1.3; margin-bottom:20px; }
+.modal-divider { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
+.modal-divider-line { flex:1; height:1px; background:var(--amber-dim); }
+.modal-divider-gem { width:6px; height:6px; background:var(--gold); transform:rotate(45deg); opacity:0.7; flex-shrink:0; }
+.modal-prayer-text { font-size:19px; color:var(--text); line-height:2.1; }
+.modal-prayer-text p + p { margin-top:24px; }
+.modal-ornament { text-align:center; padding:28px 0 22px; color:var(--gold-dim); font-size:20px; letter-spacing:12px; }
+.modal-actions { display:flex; gap:10px; padding-bottom:40px; }
+.modal-pray-btn { flex:1; padding:18px; border-radius:16px; border:none; background:linear-gradient(160deg,#f0c040 0%,#d4a017 50%,#b8860b 100%); color:#1a0f00; font-family:'Cinzel',serif; font-size:15px; font-weight:700; letter-spacing:0.08em; cursor:pointer; box-shadow:0 4px 22px rgba(212,160,23,0.4),0 1px 0 rgba(255,220,100,0.4) inset; transition:transform 0.15s; position:relative; overflow:hidden; }
+.modal-pray-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background:rgba(255,255,255,0.08); border-radius:16px 16px 0 0; }
+.modal-pray-btn:active { transform:scale(0.97); }
+.modal-pray-btn.done { background:linear-gradient(135deg,#2a6a3a,#1a4a28); box-shadow:0 4px 18px rgba(42,106,58,0.4); color:#c0ffd0; }
+.modal-share-btn { padding:18px 20px; border-radius:16px; border:1px solid var(--sky-dim); background:transparent; color:var(--text-dim); font-family:'Cinzel',serif; font-size:13px; letter-spacing:0.06em; cursor:pointer; }
+
+/* Bottom nav */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; display:flex; background:var(--bg-nav); backdrop-filter:blur(20px); border-top:1px solid var(--sky-dim); padding:8px 0 max(18px,env(safe-area-inset-bottom)); }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:10px 0; min-height:56px; justify-content:center; }
+.nav-item:active { opacity:0.7; }
+.nav-item-icon { font-size:24px; }
+.nav-item-label { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+.nav-item.active .nav-item-label { color:var(--gold-lt); font-weight:600; }
+.nav-item.active .nav-item-icon { filter:drop-shadow(0 0 8px rgba(212,160,23,0.6)); }
+.nav-item.active::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--gold); margin-top:2px; }
+
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--sky-dim);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="embers" id="embers"></div>
+<div class="shimmer-overlay" id="shimmer"></div>
+
+<div class="celebration" id="celebration">
+  <div class="celebration-ring">🕯️</div>
+  <div class="celebration-heard">Heaven has heard</div>
+  <div class="celebration-message" id="celebrationMsg">Your prayer has been received</div>
+  <div class="celebration-angel" id="celebrationAngel">— Archangel Gabriel</div>
+</div>
+<div class="particles" id="particles"></div>
+
+<div class="prayer-modal" id="prayerModal">
+  <div class="modal-topnav">
+    <div class="modal-close" onclick="closeModal()">✕</div>
+    <div class="modal-title-wrap">
+      <div class="modal-title" id="modalTitle">—</div>
+      <div class="modal-sub" id="modalSub">—</div>
+    </div>
+  </div>
+  <div class="modal-body">
+    <div class="modal-week-tag" id="modalWeekTag">—</div>
+    <div class="modal-prayer-title" id="modalPrayerTitle">—</div>
+    <div class="modal-divider"><div class="modal-divider-line"></div><div class="modal-divider-gem"></div><div class="modal-divider-line"></div></div>
+    <div class="modal-prayer-text" id="modalPrayerText"></div>
+    <div class="modal-ornament">✦ · ✦ · ✦</div>
+    <div class="modal-actions">
+      <button class="modal-pray-btn" id="modalPrayBtn" onclick="markPrayed()">🙏 I have prayed this today</button>
+      <button class="modal-share-btn">↑ Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topnav -->
+<div class="topnav">
+  <div class="back-btn">‹</div>
+  <div class="nav-center">
+    <div class="nav-title">Sacred Prayers</div>
+    <div class="nav-sub" id="navSub">—</div>
+  </div>
+</div>
+
+<!-- Today -->
+<div class="today-hero">
+  <div class="today-card" onclick="openTodayPrayer()">
+    <div class="today-badge"><div class="today-dot"></div> Today's Prayer</div>
+    <div class="today-date" id="todayDate">—</div>
+    <div class="today-title" id="todayTitle">—</div>
+    <div class="today-week-theme" id="todayTheme">—</div>
+    <button class="today-btn" id="todayBtn">🕯️ Read Today's Prayer</button>
+    <div class="today-deco">✦</div>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-row"><div class="progress-lbl">Your prayer journey</div><div class="progress-val" id="progressVal">0 prayers said</div></div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<div class="section-header">All Prayers</div>
+<div id="weeksContainer"></div>
+
+<div class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='index.html'"><div class="nav-item-icon">🏛️</div><div class="nav-item-label">Home</div></div>
+  <div class="nav-item" onclick="window.location.href='chat.html'"><div class="nav-item-icon">💬</div><div class="nav-item-label">Chat</div></div>
+  <div class="nav-item" onclick="window.location.href='journey.html'"><div class="nav-item-icon">🔥</div><div class="nav-item-label">Journey</div></div>
+  <div class="nav-item active"><div class="nav-item-icon">🕯️</div><div class="nav-item-label">Prayers</div></div>
+</div>
+
+<script>
+const WEEKS = [
+  { id:1, theme:"Protection and Abundance", angel:"Archangel Gabriel", color:"sky",
+    days:[
+      { title:"Shield of Light", content:"Archangel Gabriel, messenger of light and hope, I ask that you be my shield and my guide. Surround my paths with your light of purity, driving away any shadow of fear or doubt, and protecting my spirit from adversities and negative energies that try to cross my path.\n\nI also call upon your intercession so that abundance may flow into my life like an inexhaustible river. May the doors of prosperity open at the sound of your trumpet, bringing plenty to my table, clarity to my business, and peace to my heart, under the constant watch of the angels of provision. Amen." },
+      { title:"Protection Over My Home", content:"Glorious Gabriel, you who announced the greatest miracle of humanity, announce today safety within my home. May your white wings cover my family, creating a perimeter of protection where only love and harmony may enter, repelling all scarcity.\n\nI ask that, together with Archangel Michael, you cut the chains of financial limitation. May divine abundance reach me from expected and unexpected sources, multiplying my resources so that I may also be a channel of blessings in the lives of others." },
+      { title:"Words and Harvest", content:"Holy Archangel Gabriel, master of divine communication, protect my words and my interactions today. May I be shielded from misunderstandings, and may my harvest be protected by your celestial strength.\n\nMay the energy of abundance manifest in my health and vitality. With the help of Archangel Raphael, I ask that my body be a temple of vigor, allowing me to have the energy to build my wealth and enjoy the wonders the universe offers me." },
+      { title:"Dreams and Opportunity", content:"Archangel Gabriel, bearer of good news, watch over my dreams and my projects. May no external influence divert my focus from victory, and may your purifying light cleanse any trace of envy or obstacles in my professional journey.\n\nI invoke heavenly fullness so that my life overflows with opportunities. May Gabriel's wisdom show me where to plant my seeds so that abundance becomes the natural result of every effort I make." },
+      { title:"Armor of Light", content:"On this day, I ask Archangel Gabriel to seal my paths with his crystalline purity. May your protection be like an armor of light, preventing the dangers of daily life from touching my physical or emotional integrity.\n\nMay abundance not be just a concept, but a living reality in my hands. May the flow of money, ideas, and good connections be constant, bringing the certainty that I am fully provided for by heaven." },
+      { title:"Rest and Renewal", content:"Archangel Gabriel, angel of annunciation and sacred rest, protect my time of leisure and renewal. May your presence in my home drive away any worry, and may I feel the safety of being under the watchful gaze of the celestial legions.\n\nI give thanks for the abundance of happy moments and for the prosperity that already dwells within me. May Gabriel continue to announce blessings over all those I love." },
+      { title:"Closing the Cycle", content:"Archangel Gabriel, purify my soul of any weariness and renew my protection for the new cycle ahead. May I rest under the mantle of your serenity and rise again with the strength of a victor, ready to receive the miracles to come.\n\nMay the seed of abundance planted during these days flourish intensely. With the help of all guardian angels, I ask that spiritual and material prosperity be the foundation of my life, now and always. Amen." }
+    ]
+  },
+  { id:2, theme:"Clarity and Revelation", angel:"Archangel Gabriel", color:"crimson",
+    days:[
+      { title:"Clear Vision at Dawn", content:"Archangel Gabriel, you who bring the messages of the Most High, cleanse my vision at this new beginning. I ask that you remove the mists of mental confusion so that I may clearly see every opportunity and every step I must take.\n\nMay divine revelation illuminate my intuition. With the help of Archangel Uriel, I ask that the light of truth shine in my mind, allowing me to make decisions based on wisdom rather than uncertainty." },
+      { title:"Sacred Hearing", content:"Holy Gabriel, angel of purity, purify my spiritual hearing. May I be able to hear the whispers of heaven amid the noise of the world, understanding the guidance sent to me for my growth and personal evolution.\n\nGive me clarity about my daily missions. May I not get lost in distractions, and may your trumpet sound in my heart whenever I need a reminder of what is truly essential." },
+      { title:"Truth in Relationships", content:"Archangel Gabriel, guide my thoughts toward the light. I ask that you bring clarity to my relationships and conversations, so that truth may be spoken with love.\n\nMay the revelation of new paths manifest in my life. I ask that Archangel Gabriel open my understanding to new ideas and creative solutions that were once hidden from my eyes." },
+      { title:"Illuminated Mind", content:"Glorious Gabriel, protector of truth seekers, illuminate my studies and my work. May I have ease in learning and clarity in teaching, becoming a transparent channel of divine intelligence wherever I go.\n\nRemove from me all illusion and deception. May Gabriel's strength reveal the true intentions behind others' words, giving me the discernment needed to walk with security and confidence." },
+      { title:"Honest Evaluation", content:"Archangel Gabriel, I ask that you bring clarity regarding the results of my efforts. May I evaluate my path with honesty, and may the revelations of heaven show me where I must adjust my plans.\n\nMay Archangel Jophiel join Gabriel to beautify my thoughts. May I see clarity in beauty and truth in simplicity, arriving at a place of light mind and peaceful spirit." },
+      { title:"Revelation in Rest", content:"Archangel Gabriel, angel of revelation, bring light into my moments of stillness. May my soul be instructed by you during this time of rest, and may I receive clear guidance with serenity and faith.\n\nI give thanks for the clarity I have received. May Gabriel's light continue to shine within me, revealing that the greatest truth is the love God has for me and for all creation." },
+      { title:"Mirror of the Soul", content:"As this cycle of clarity closes, Archangel Gabriel, I affirm my commitment to truth. May I not fear what is revealed to me, for divine light only exposes what needs to be healed or strengthened for my good.\n\nMay the days ahead be guided by a crystal-clear vision. I ask that Gabriel keep my mind like a clean mirror of the Creator's will, today and always. Amen." }
+    ]
+  }
+];
+
+let prayed = JSON.parse(localStorage.getItem('ap_prayed')||'{}');
+let modalWeek=0, modalDay=0;
+
+const JOIN_DATE = new Date();
+JOIN_DATE.setDate(JOIN_DATE.getDate()-6);
+function getDayNumber() { return Math.floor((new Date()-JOIN_DATE)/86400000)+1; }
+function getDayInfo(n) { const wi=Math.floor((n-1)/7),di=(n-1)%7; if(wi>=WEEKS.length)return null; return{week:WEEKS[wi],wi,di}; }
+function formatDate(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric'}); }
+
+window.addEventListener('load',()=>{
+  buildEmbers();
+  const dayNum=getDayNumber(), info=getDayInfo(dayNum), today=new Date();
+  document.getElementById('navSub').textContent=formatDate(today);
+  if(info){
+    const key=`${info.wi}-${info.di}`, done=prayed[key];
+    document.getElementById('todayDate').textContent=formatDate(today).toUpperCase();
+    document.getElementById('todayTitle').textContent=info.week.days[info.di].title;
+    document.getElementById('todayTheme').textContent=`Week ${info.wi+1} · ${info.week.theme}`;
+    const btn=document.getElementById('todayBtn');
+    if(done){btn.textContent='✦ Prayer completed today';btn.classList.add('done');}
+  }
+  buildAccordion(); updateProgress();
+});
+
+function buildEmbers(){
+  const el=document.getElementById('embers');
+  for(let i=0;i<20;i++){
+    const e=document.createElement('div');
+    const sz=Math.random()<0.3?3:Math.random()<0.6?2:1;
+    e.className='ember';
+    e.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;bottom:${Math.random()*30}%;--ed:${3+Math.random()*4}s;--edelay:${Math.random()*4}s;--eop:${0.3+Math.random()*0.5}`;
+    el.appendChild(e);
+  }
+}
+
+function buildAccordion(){
+  const dayNum=getDayNumber(), container=document.getElementById('weeksContainer');
+  container.innerHTML='';
+  WEEKS.forEach((week,wi)=>{
+    const firstDay=wi*7+1, isCurrent=dayNum>=firstDay&&dayNum<firstDay+7;
+    const block=document.createElement('div');
+    block.className=`week-block color-${week.color}${isCurrent?' open':''}`;
+    block.innerHTML=`
+      <div class="week-header" onclick="this.parentElement.classList.toggle('open')">
+        <div class="week-num-badge">${wi+1}</div>
+        <div class="week-info"><div class="week-tag">${week.angel}</div><div class="week-name">${week.theme}</div></div>
+        <div class="week-chevron">›</div>
+      </div>
+      <div class="week-days"></div>`;
+    container.appendChild(block);
+    const daysEl=block.querySelector('.week-days');
+    week.days.forEach((day,di)=>{
+      const gd=wi*7+di+1, isToday=gd===dayNum, isLocked=gd>dayNum;
+      const key=`${wi}-${di}`, done=prayed[key];
+      const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+wi*7+di);
+      const row=document.createElement('div');
+      row.className='day-row'+(isToday?' today-row':'')+(done?' done-row':'')+(isLocked?' locked':'');
+      row.innerHTML=`
+        <div class="day-circle">${done?'✦':di+1}</div>
+        <div class="day-info"><div class="day-date">${isToday?'📍 Today · ':''}${formatDate(dd)}</div><div class="day-title">${day.title}</div></div>
+        <div class="day-status">${done?'✅':isToday?'🕯️':isLocked?'🔒':'›'}</div>`;
+      if(!isLocked) row.onclick=()=>openPrayer(wi,di);
+      daysEl.appendChild(row);
+    });
+  });
+}
+
+function openTodayPrayer(){ const i=getDayInfo(getDayNumber()); if(i)openPrayer(i.wi,i.di); }
+
+function openPrayer(wi,di){
+  const week=WEEKS[wi], day=week.days[di], key=`${wi}-${di}`, done=prayed[key];
+  modalWeek=wi; modalDay=di;
+  const dd=new Date(JOIN_DATE); dd.setDate(JOIN_DATE.getDate()+wi*7+di);
+  document.getElementById('modalTitle').textContent=day.title;
+  document.getElementById('modalSub').textContent=formatDate(dd);
+  document.getElementById('modalWeekTag').textContent=`Week ${wi+1} · ${week.theme} · ${week.angel}`;
+  document.getElementById('modalPrayerTitle').textContent=day.title;
+  document.getElementById('modalPrayerText').innerHTML=day.content.split('\n\n').map(p=>`<p>${p}</p>`).join('');
+  const btn=document.getElementById('modalPrayBtn');
+  if(done){btn.textContent='✦ Prayer completed';btn.classList.add('done');}
+  else{btn.textContent='🙏 I have prayed this today';btn.classList.remove('done');}
+  document.getElementById('prayerModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(){ document.getElementById('prayerModal').classList.remove('open'); document.body.style.overflow=''; }
+
+function markPrayed(){
+  const key=`${modalWeek}-${modalDay}`;
+  if(prayed[key])return;
+  prayed[key]=true; localStorage.setItem('ap_prayed',JSON.stringify(prayed));
+  const btn=document.getElementById('modalPrayBtn');
+  btn.textContent='✦ Prayer completed'; btn.classList.add('done');
+  showCelebration();
+  setTimeout(()=>{ buildAccordion(); updateProgress(); },500);
+}
+
+function updateProgress(){
+  let total=0,done=0;
+  WEEKS.forEach((w,wi)=>w.days.forEach((_,di)=>{total++;if(prayed[`${wi}-${di}`])done++;}));
+  document.getElementById('progressVal').textContent=`${done} of ${total} prayers said`;
+  document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';
+}
+
+function showCelebration(){
+  const week=WEEKS[modalWeek];
+  const msgs=['Heaven has heard your prayer','Your words have reached the angels','The light has received your prayer','Raphael carries your prayer forward'];
+  document.getElementById('celebrationMsg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+  document.getElementById('celebrationAngel').textContent='— '+week.angel;
+  launchParticles();
+  const cel=document.getElementById('celebration'); cel.classList.add('active');
+  setTimeout(()=>{ cel.style.transition='opacity 0.8s ease'; cel.style.opacity='0'; setTimeout(()=>{ cel.classList.remove('active'); cel.style.opacity=''; cel.style.transition=''; },800); },3500);
+}
+
+function launchParticles(){
+  const c=document.getElementById('particles'); c.innerHTML=''; c.classList.add('active');
+  const cx=window.innerWidth/2, cy=window.innerHeight/2;
+  for(let i=0;i<40;i++){
+    const p=document.createElement('div'), isStar=i%3===0;
+    p.className='particle'+(isStar?' star-shape':'');
+    const angle=(Math.PI*2/40)*i+(Math.random()-0.5)*0.5, dist=100+Math.random()*250;
+    p.style.cssText=`left:${cx}px;top:${cy}px;--px:${Math.cos(angle)*dist}px;--py:${Math.sin(angle)*dist}px;--pd:${0.6+Math.random()}s;--pdelay:${Math.random()*0.5}s`;
+    if(isStar) p.textContent='✦';
+    c.appendChild(p);
+  }
+  setTimeout(()=>{ c.classList.remove('active'); c.innerHTML=''; },2500);
+}
+</script>
+</body>
+</html>

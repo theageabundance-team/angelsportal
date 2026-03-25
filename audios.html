@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#06081a">
+<title>Angels Portal — Healing Audios</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg:         #06081a;
+  --bg-mid:     #0a0e28;
+  --bg-card:    #0e1232;
+  --bg-inner:   #080b20;
+  --bg-nav:     rgba(6,8,26,0.97);
+  --midnight:   #1a2060;
+  --indigo:     #3a2aaa;
+  --indigo-lt:  #6a5aee;
+  --indigo-br:  #9a8aff;
+  --indigo-pale:#ddd8ff;
+  --indigo-dim: rgba(58,42,170,0.25);
+  --indigo-glow:rgba(58,42,170,0.08);
+  --gold:       #d4a017;
+  --gold-lt:    #f0c040;
+  --gold-br:    #ffd460;
+  --gold-pale:  #faedc4;
+  --gold-dim:   rgba(212,160,23,0.22);
+  --gold-glow:  rgba(212,160,23,0.08);
+  --text:       #e8e4f8;
+  --text-dim:   rgba(232,228,248,0.6);
+  --radius-lg:  24px; --radius-md:18px; --radius-sm:14px;
+}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Lora',Georgia,serif;
+  min-height:100dvh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:100px;
+}
+
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(30,20,120,0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 0% 80%, rgba(20,10,90,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 100% 30%, rgba(40,20,100,0.1) 0%, transparent 50%);
+}
+
+/* Slow drifting moon glow */
+.moon-glow {
+  position:fixed; width:400px; height:400px; border-radius:50%;
+  background:radial-gradient(circle, rgba(58,42,170,0.08) 0%, transparent 65%);
+  top:-100px; left:50%; transform:translateX(-50%);
+  pointer-events:none; z-index:0;
+  animation:moon-drift 12s ease-in-out infinite alternate;
+}
+@keyframes moon-drift { from{transform:translateX(-50%) scale(1)} to{transform:translateX(-50%) scale(1.15)} }
+
+/* Stars */
+.stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.star { position:absolute; border-radius:50%; background:var(--indigo-pale); animation:twinkle var(--d) ease-in-out infinite var(--delay); opacity:var(--op); }
+@keyframes twinkle { 0%,100%{opacity:var(--op)} 50%{opacity:0.03} }
+
+/* Topnav */
+.topnav { position:sticky; top:0; z-index:100; display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--bg-nav); backdrop-filter:blur(20px); border-bottom:1px solid var(--gold-dim); }
+.back-btn { width:40px; height:40px; border-radius:50%; background:var(--bg-card); border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gold-lt); flex-shrink:0; }
+.back-btn:active { transform:scale(0.9); }
+.nav-center { flex:1; }
+.nav-title { font-family:'Cinzel',serif; font-size:16px; font-weight:600; color:var(--gold-lt); letter-spacing:0.06em; }
+.nav-sub { font-size:13px; color:var(--text-dim); margin-top:1px; }
+
+/* Featured player — Now Playing */
+.featured {
+  position:relative; z-index:5; margin:20px 16px 0;
+  border-radius:var(--radius-lg);
+  background:linear-gradient(160deg, #1a1050 0%, #0e0a38 50%, #120e40 100%);
+  border:1px solid rgba(106,90,238,0.3);
+  overflow:hidden; padding:28px 24px 24px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(106,90,238,0.2);
+}
+.featured::before {
+  content:''; position:absolute; top:0; left:5%; right:5%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-br),transparent); opacity:0.4;
+}
+.featured::after {
+  content:''; position:absolute; bottom:-60px; right:-60px;
+  width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle, rgba(58,42,170,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.featured-tag { display:inline-flex; align-items:center; gap:7px; background:rgba(212,160,23,0.1); border:1px solid rgba(212,160,23,0.25); border-radius:20px; padding:5px 14px; font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.12em; color:var(--gold-lt); text-transform:uppercase; margin-bottom:16px; }
+.featured-dot { width:7px; height:7px; border-radius:50%; background:var(--gold-br); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.65)} }
+
+.featured-week { font-family:'Cinzel',serif; font-size:11px; color:rgba(212,160,23,0.6); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px; }
+.featured-title { font-family:'Cinzel',serif; font-size:22px; font-weight:600; color:var(--gold-pale); line-height:1.3; margin-bottom:6px; }
+.featured-desc { font-size:15px; color:var(--text-dim); line-height:1.65; margin-bottom:22px; font-style:italic; }
+
+/* Waveform visualizer */
+.waveform-wrap { display:flex; align-items:center; gap:3px; height:48px; margin-bottom:20px; }
+.wv-bar {
+  flex:1; border-radius:3px; background:var(--indigo-lt);
+  opacity:0.35; transition:opacity 0.3s;
+  animation:wv-idle var(--wvd) ease-in-out infinite var(--wvdl);
+}
+@keyframes wv-idle { 0%,100%{height:var(--wvn);opacity:0.25} 50%{height:var(--wvx);opacity:0.5} }
+.wv-bar.playing { animation:wv-play var(--wvd) ease-in-out infinite var(--wvdl); background:var(--gold-lt); opacity:0.7; }
+@keyframes wv-play { 0%,100%{height:var(--wvn);opacity:0.5} 50%{height:var(--wvx);opacity:1} }
+
+/* Progress track */
+.audio-progress { margin-bottom:16px; }
+.progress-track { height:4px; background:rgba(106,90,238,0.2); border-radius:2px; overflow:hidden; margin-bottom:6px; cursor:pointer; }
+.progress-track-fill { height:100%; background:linear-gradient(90deg,var(--indigo-lt),var(--gold)); border-radius:2px; width:0%; transition:width 0.5s linear; }
+.progress-times { display:flex; justify-content:space-between; font-family:'Cinzel',serif; font-size:11px; color:var(--text-dim); letter-spacing:0.06em; }
+
+/* Play controls */
+.play-controls { display:flex; align-items:center; gap:12px; }
+.ctrl-btn { width:44px; height:44px; border-radius:50%; background:rgba(106,90,238,0.15); border:1px solid var(--indigo-dim); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; color:var(--indigo-br); transition:all 0.2s; }
+.ctrl-btn:active { transform:scale(0.9); }
+.play-btn {
+  width:60px; height:60px; border-radius:50%;
+  background:linear-gradient(135deg,#f0c040,#d4a017,#b8860b);
+  border:none; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:24px; color:#1a0f00;
+  box-shadow:0 4px 20px rgba(212,160,23,0.45);
+  transition:transform 0.15s; flex-shrink:0;
+}
+.play-btn:active { transform:scale(0.93); }
+.ctrl-spacer { flex:1; }
+.ctrl-duration { font-family:'Cinzel',serif; font-size:12px; color:var(--text-dim); letter-spacing:0.06em; }
+
+/* Section header */
+.section-header { font-family:'Cinzel',serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold-lt); padding:24px 20px 14px; position:relative; z-index:5; display:flex; align-items:center; gap:10px; }
+.section-header::after { content:''; flex:1; height:1px; background:var(--gold-dim); }
+
+/* Weekly renewal banner */
+.weekly-banner { position:relative; z-index:5; margin:0 16px; border-radius:var(--radius-md); background:var(--bg-card); border:1px solid var(--gold-dim); padding:14px 18px; display:flex; align-items:center; gap:14px; overflow:hidden; }
+.weekly-banner::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--indigo),var(--gold),var(--indigo-br)); }
+.weekly-icon { font-size:26px; flex-shrink:0; }
+.weekly-lbl { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); margin-bottom:3px; }
+.weekly-title { font-family:'Cinzel',serif; font-size:14px; font-weight:600; color:var(--text); }
+.weekly-sub { font-size:13px; color:var(--text-dim); }
+
+/* Audio list */
+.audio-list { display:flex; flex-direction:column; gap:10px; padding:0 16px; position:relative; z-index:5; }
+
+.audio-card {
+  border-radius:var(--radius-lg); border:1px solid var(--gold-dim);
+  background:var(--bg-card);
+  cursor:pointer; transition:transform 0.18s;
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:16px;
+  padding:16px 20px;
+}
+.audio-card:active { transform:scale(0.975); }
+.audio-card.active-card { border-color:rgba(212,160,23,0.4); background:linear-gradient(135deg,rgba(26,16,80,0.8),var(--bg-card)); }
+.audio-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:var(--radius-lg) var(--radius-lg) 0 0; background:linear-gradient(90deg,var(--indigo),var(--indigo-br),var(--gold)); opacity:0.5; }
+.audio-card.active-card::before { opacity:1; }
+
+.audio-thumb {
+  width:56px; height:56px; border-radius:16px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--indigo),var(--midnight));
+  border:1px solid var(--indigo-dim);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; position:relative;
+}
+.audio-card.active-card .audio-thumb { background:linear-gradient(135deg,rgba(212,160,23,0.2),var(--midnight)); border-color:var(--gold-dim); }
+.audio-playing-indicator { position:absolute; bottom:-2px; right:-2px; width:16px; height:16px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:8px; }
+
+.audio-info { flex:1; min-width:0; }
+.audio-week-tag { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin-bottom:4px; }
+.audio-title { font-family:'Cinzel',serif; font-size:15px; font-weight:600; color:var(--gold-pale); line-height:1.3; margin-bottom:3px; }
+.audio-meta { display:flex; align-items:center; gap:8px; }
+.audio-duration { font-size:12px; color:var(--text-dim); font-family:'Cinzel',serif; }
+.audio-desc { font-size:13px; color:var(--text-dim); line-height:1.5; margin-top:3px; }
+
+.audio-play-icon { font-size:22px; flex-shrink:0; color:var(--text-dim); }
+.audio-card.active-card .audio-play-icon { color:var(--gold-lt); }
+
+/* Mini waveform in card */
+.mini-wave { display:flex; align-items:center; gap:2px; margin-top:6px; }
+.mini-bar { width:2px; border-radius:1px; background:var(--indigo-lt); opacity:0.4; }
+.audio-card.active-card .mini-bar { background:var(--gold); opacity:0.6; animation:wv-idle var(--wvd) ease-in-out infinite var(--wvdl); }
+
+/* Coming soon badge */
+.coming-soon { display:inline-flex; align-items:center; gap:5px; background:rgba(58,42,170,0.15); border:1px solid var(--indigo-dim); border-radius:20px; padding:3px 10px; font-family:'Cinzel',serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--indigo-br); margin-top:5px; }
+
+/* Bottom nav */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; display:flex; background:var(--bg-nav); backdrop-filter:blur(20px); border-top:1px solid var(--gold-dim); padding:8px 0 max(18px,env(safe-area-inset-bottom)); }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:10px 0; min-height:56px; justify-content:center; }
+.nav-item:active { opacity:0.7; }
+.nav-item-icon { font-size:24px; }
+.nav-item-label { font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+.nav-item.active .nav-item-label { color:var(--gold-lt); font-weight:600; }
+.nav-item.active .nav-item-icon { filter:drop-shadow(0 0 8px rgba(212,160,23,0.6)); }
+.nav-item.active::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--gold); margin-top:2px; }
+
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="moon-glow"></div>
+<div class="stars" id="stars"></div>
+
+<!-- Topnav -->
+<div class="topnav">
+  <div class="back-btn" onclick="window.location.href='index.html'">‹</div>
+  <div class="nav-center">
+    <div class="nav-title">Healing Audios</div>
+    <div class="nav-sub">Peace · Healing · Rest</div>
+  </div>
+</div>
+
+<!-- Featured player -->
+<div class="featured">
+  <div class="featured-tag"><div class="featured-dot"></div> This Week's Audio</div>
+  <div class="featured-week">Week 1 · Protection & Abundance</div>
+  <div class="featured-title" id="featuredTitle">Deep Sleep Blessing</div>
+  <div class="featured-desc" id="featuredDesc">Let Archangel Raphael's frequency wash over you as you drift into healing rest. Surrender every worry to the angels.</div>
+
+  <!-- Waveform -->
+  <div class="waveform-wrap" id="waveform"></div>
+
+  <!-- Progress -->
+  <div class="audio-progress">
+    <div class="progress-track" onclick="seekAudio(event)">
+      <div class="progress-track-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-times">
+      <span id="currentTime">0:00</span>
+      <span id="totalTime">20:00</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="play-controls">
+    <div class="ctrl-btn" onclick="skip(-15)">⏪</div>
+    <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+    <div class="ctrl-btn" onclick="skip(15)">⏩</div>
+    <div class="ctrl-spacer"></div>
+    <div class="ctrl-duration">20 min</div>
+  </div>
+</div>
+
+<!-- Weekly banner -->
+<div class="section-header">This Week's Blessing</div>
+<div class="weekly-banner">
+  <div class="weekly-icon">🔄</div>
+  <div>
+    <div class="weekly-lbl">Renewed every Monday</div>
+    <div class="weekly-title">New healing frequency each week</div>
+    <div class="weekly-sub">Raphael brings a new blessing for your rest</div>
+  </div>
+</div>
+
+<!-- All audios -->
+<div class="section-header">All Sessions</div>
+<div class="audio-list" id="audioList"></div>
+
+<div style="height:24px"></div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='index.html'"><div class="nav-item-icon">🏛️</div><div class="nav-item-label">Home</div></div>
+  <div class="nav-item" onclick="window.location.href='chat.html'"><div class="nav-item-icon">💬</div><div class="nav-item-label">Chat</div></div>
+  <div class="nav-item" onclick="window.location.href='journey.html'"><div class="nav-item-icon">🔥</div><div class="nav-item-label">Journey</div></div>
+  <div class="nav-item" onclick="window.location.href='prayers.html'"><div class="nav-item-icon">🕯️</div><div class="nav-item-label">Prayers</div></div>
+</div>
+
+<script>
+const AUDIOS = [
+  {
+    week:1, tag:`Week 1 · Protection & Abundance`,
+    title:`Deep Sleep Blessing`,
+    desc:`Let Raphael's frequency wash over you as you drift into healing rest. Surrender every worry to the angels.`,
+    duration:`20:00`, emoji:`🌙`, available:true
+  },
+  {
+    week:1, tag:`Week 1 · Protection & Abundance`,
+    title:`Morning Protection Shield`,
+    desc:`Start your day wrapped in divine armor. A powerful morning activation to seal your energy before facing the world.`,
+    duration:`12:00`, emoji:`🛡️`, available:true
+  },
+  {
+    week:2, tag:`Week 2 · Clarity & Revelation`,
+    title:`Third Eye Opening Meditation`,
+    desc:`A calming session to quiet the mind and open the channel of divine intuition. Let Raphael reveal what has been hidden.`,
+    duration:`18:00`, emoji:`🔮`, available:false
+  },
+  {
+    week:2, tag:`Week 2 · Clarity & Revelation`,
+    title:`Anxiety Release Frequency`,
+    desc:`432Hz healing tones combined with Gabriel's whisper to dissolve anxiety and restore peace to your nervous system.`,
+    duration:`15:00`, emoji:`🎵`, available:false
+  },
+  {
+    week:3, tag:`Week 3 · Healing & Restoration`,
+    title:`Deep Body Healing`,
+    desc:`A full-body scan guided by Raphael to locate and release areas of tension, pain and spiritual blockage.`,
+    duration:`25:00`, emoji:`✨`, available:false
+  },
+  {
+    week:3, tag:`Week 3 · Healing & Restoration`,
+    title:`Emotional Wounds Cleansing`,
+    desc:`Release old emotional wounds and grief that have been stored in your body. Raphael holds space for your healing.`,
+    duration:`22:00`, emoji:`💜`, available:false
+  },
+  {
+    week:4, tag:`Week 4 · Abundance & Prosperity`,
+    title:`Abundance Activation`,
+    desc:`Align your energy with the frequency of divine provision. Open every channel of your life to receive what heaven has prepared.`,
+    duration:`17:00`, emoji:`✦`, available:false
+  },
+  {
+    week:4, tag:`Week 4 · Abundance & Prosperity`,
+    title:`Gratitude & Manifestation`,
+    desc:`A sacred practice of gratitude that seals your life against envy and opens the gates of divine overflow.`,
+    duration:`14:00`, emoji:`🌟`, available:false
+  }
+];
+
+let isPlaying = false;
+let currentAudio = 0;
+let progress = 0;
+let timer = null;
+
+// Stars
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 100; i++) {
+  const s = document.createElement('div');
+  const sz = Math.random() < 0.15 ? 3 : Math.random() < 0.4 ? 2 : 1;
+  s.className = 'star';
+  s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*6}s;--delay:${Math.random()*6}s;--op:${0.1+Math.random()*0.5}`;
+  starsEl.appendChild(s);
+}
+
+// Waveform
+const wf = document.getElementById('waveform');
+const heights = [20,35,50,28,42,60,38,24,48,55,30,44,58,32,46,62,28,40,52,36,48,58,26,42,56,34,50,44,30,38,54,46,28,60,36,42,50,32,44,56,38,24,48,40,34,52,46,28,38,50];
+heights.forEach((h, i) => {
+  const bar = document.createElement('div');
+  bar.className = 'wv-bar';
+  bar.style.cssText = `height:${h}%;--wvd:${0.6+Math.random()*0.8}s;--wvdl:${Math.random()*0.6}s;--wvn:${h*0.4}%;--wvx:${h}%`;
+  wf.appendChild(bar);
+});
+
+// Build audio list
+const list = document.getElementById('audioList');
+AUDIOS.forEach((a, i) => {
+  const card = document.createElement('div');
+  card.className = `audio-card${i === 0 ? ' active-card' : ''}`;
+
+  const miniWave = Array.from({length:8}, (_, j) => {
+    const h = 20 + Math.random() * 60;
+    return `<div class="mini-bar" style="height:${h}%;--wvd:${0.5+Math.random()*0.8}s;--wvdl:${Math.random()*0.5}s;--wvn:${h*0.3}%;--wvx:${h}%"></div>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="audio-thumb">
+      ${a.emoji}
+      ${i === 0 ? '<div class="audio-playing-indicator">♪</div>' : ''}
+    </div>
+    <div class="audio-info">
+      <div class="audio-week-tag">${a.tag}</div>
+      <div class="audio-title">${a.title}</div>
+      ${a.available
+        ? `<div class="audio-meta"><div class="audio-duration">⏱ ${a.duration}</div></div>
+           <div class="mini-wave">${miniWave}</div>`
+        : `<div class="audio-desc">${a.desc.substring(0,60)}...</div>
+           <div class="coming-soon">🔒 Coming Week ${a.week}</div>`
+      }
+    </div>
+    <div class="audio-play-icon">${a.available ? (i === 0 ? '▶' : '▷') : '🔒'}</div>`;
+
+  if (a.available) card.onclick = () => selectAudio(i);
+  list.appendChild(card);
+});
+
+function selectAudio(idx) {
+  currentAudio = idx;
+  const a = AUDIOS[idx];
+  document.getElementById('featuredTitle').textContent = a.title;
+  document.getElementById('featuredDesc').textContent = a.desc;
+  document.getElementById('totalTime').textContent = a.duration;
+  progress = 0;
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('currentTime').textContent = '0:00';
+
+  document.querySelectorAll('.audio-card').forEach((c, i) => {
+    c.classList.toggle('active-card', i === idx);
+  });
+
+  if (isPlaying) startPlay();
+}
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
+  document.querySelectorAll('.wv-bar').forEach(b => b.classList.toggle('playing', isPlaying));
+  if (isPlaying) startPlay();
+  else { clearInterval(timer); }
+}
+
+function startPlay() {
+  clearInterval(timer);
+  // Simulate progress (demo only — replace with real audio element)
+  timer = setInterval(() => {
+    progress = Math.min(progress + 0.1, 100);
+    document.getElementById('progressFill').style.width = progress + '%';
+    const secs = Math.floor((progress / 100) * 1200);
+    document.getElementById('currentTime').textContent = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+    if (progress >= 100) { clearInterval(timer); isPlaying = false; document.getElementById('playBtn').textContent = '▶'; }
+  }, 200);
+}
+
+function skip(s) {
+  progress = Math.max(0, Math.min(100, progress + (s / 1200) * 100));
+  document.getElementById('progressFill').style.width = progress + '%';
+  const secs = Math.floor((progress / 100) * 1200);
+  document.getElementById('currentTime').textContent = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+}
+
+function seekAudio(e) {
+  const track = e.currentTarget;
+  const rect = track.getBoundingClientRect();
+  progress = ((e.clientX - rect.left) / rect.width) * 100;
+  document.getElementById('progressFill').style.width = progress + '%';
+  const secs = Math.floor((progress / 100) * 1200);
+  document.getElementById('currentTime').textContent = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+}
+</script>
+</body>
+</html>
