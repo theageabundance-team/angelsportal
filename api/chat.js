@@ -12,7 +12,7 @@ function json(data, status = 200) {
 }
 
 // FIX 1: Modelo correto — gemini-2.0-flash é o mais estável e rápido agora
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=';
 
 // FIX 2: Retry automático em caso de rate limit (429)
 async function callGemini(apiKey, payload, retries = 3) {
