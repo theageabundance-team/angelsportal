@@ -329,8 +329,7 @@ const WEEKS = [
 let prayed = JSON.parse(localStorage.getItem('ap_prayed')||'{}');
 let modalWeek=0, modalDay=0;
 
-const JOIN_DATE = new Date();
-JOIN_DATE.setDate(JOIN_DATE.getDate()-6);
+const JOIN_DATE = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
 function getDayNumber() { return Math.floor((new Date()-JOIN_DATE)/86400000)+1; }
 function getDayInfo(n) { const wi=Math.floor((n-1)/7),di=(n-1)%7; if(wi>=WEEKS.length)return null; return{week:WEEKS[wi],wi,di}; }
 function formatDate(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric'}); }
