@@ -174,7 +174,10 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
             console.log('Memory updated for:', email);
           }
 
-          await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+          // ✅ FIX: last_seen precisa ser só "YYYY-MM-DD" (tipo date no Supabase)
+          const todayDate = new Date().toISOString().split('T')[0];
+
+          const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
             method: 'PATCH',
             headers: {
               'apikey': SUPABASE_KEY,
@@ -185,9 +188,15 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
             body: JSON.stringify({
               chat_history: newChatHistory,
               memory: newMemory,
-              last_seen: now
+              last_seen: todayDate  // ✅ FIX: era "now" (timestamp completo), agora é só a data
             })
           });
+
+          // ✅ FIX: loga erro detalhado se o Supabase rejeitar
+          if (!saveRes.ok) {
+            const errBody = await saveRes.text();
+            console.error('Supabase PATCH failed:', saveRes.status, errBody);
+          }
         } catch (e) {
           console.error('Background save error:', e);
         }
