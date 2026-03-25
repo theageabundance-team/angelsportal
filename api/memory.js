@@ -26,12 +26,18 @@ export default async function handler(req) {
 
   try {
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email) + '&select=memory',
+      SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email) + '&select=memory,chat_history',
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
     );
     const users = await res.json();
     const memory = users?.[0]?.memory || '';
-    return new Response(JSON.stringify({ memory }), { status: 200, headers: CORS });
+    let chatHistory = [];
+    try {
+      const raw = users?.[0]?.chat_history;
+      if (Array.isArray(raw)) chatHistory = raw;
+      else if (typeof raw === 'string') chatHistory = JSON.parse(raw);
+    } catch (e) { chatHistory = []; }
+    return new Response(JSON.stringify({ memory, chatHistory }), { status: 200, headers: CORS });
   } catch (e) {
     return new Response(JSON.stringify({ memory: '' }), { status: 200, headers: CORS });
   }

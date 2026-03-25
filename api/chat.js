@@ -60,7 +60,7 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-    const { history = [], userName = 'dear one', email = '', memory = '' } = body;
+    const { history = [], chatHistory = [], userName = 'dear one', email = '', memory = '' } = body;
     if (!history.length) return json({ error: 'Message required' }, 400);
 
     // Last user message in history — used for memory update
@@ -184,10 +184,10 @@ MEMORY: ${memorySection}`;
       reply = 'I am here with you. Whatever is in your heart right now — bring it to me. What is happening?';
     }
 
-    // Update memory in Supabase (best-effort, non-blocking)
+    // Update memory + chat_history in Supabase (best-effort, non-blocking)
     if (email && process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-      updateMemory(apiKey, email, message, memory).catch(e =>
-        console.error('Memory update failed:', e.message)
+      updateUserData(apiKey, email, message, memory, chatHistory).catch(e =>
+        console.error('User data update failed:', e.message)
       );
     }
 
@@ -199,7 +199,7 @@ MEMORY: ${memorySection}`;
   }
 }
 
-async function updateMemory(apiKey, email, message, currentMemory) {
+async function updateUserData(apiKey, email, message, currentMemory, chatHistory) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
@@ -220,11 +220,14 @@ async function updateMemory(apiKey, email, message, currentMemory) {
       generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
     }, 2);
   } catch (e) {
-    return; // Memory update is best-effort
+    // Memory generation failed — still save chat_history
   }
 
   const newMemory = memData?.candidates?.[0]?.content?.parts?.[0]?.text || storedMemory;
-  if (!newMemory) return;
+
+  const patch = { last_seen: new Date().toISOString().split('T')[0] };
+  if (newMemory) patch.memory = newMemory;
+  if (Array.isArray(chatHistory) && chatHistory.length) patch.chat_history = chatHistory;
 
   await fetch(
     SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email),
@@ -236,7 +239,7 @@ async function updateMemory(apiKey, email, message, currentMemory) {
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ memory: newMemory, last_seen: new Date().toISOString().split('T')[0] })
+      body: JSON.stringify(patch)
     }
   );
 }
