@@ -335,12 +335,60 @@ html.light .today-title, html.light .today-date, html.light .today-week-theme { 
 .dash-animate:nth-child(3){animation-delay:0.15s} .dash-animate:nth-child(4){animation-delay:0.20s}
 .dash-animate:nth-child(5){animation-delay:0.25s} .dash-animate:nth-child(6){animation-delay:0.30s}
 .dash-animate:nth-child(7){animation-delay:0.35s} .dash-animate:nth-child(8){animation-delay:0.40s}
+
+
+/* ===== STREAK TOAST ===== */
+.streak-toast {
+  position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(120px);
+  z-index:200; width:calc(100% - 32px); max-width:400px;
+  background:linear-gradient(135deg, #1a1040 0%, #0f0a28 100%);
+  border:1px solid rgba(212,160,23,0.45);
+  border-radius:20px; padding:16px 18px;
+  display:flex; align-items:center; gap:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,160,23,0.1) inset;
+  transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+  opacity:0; pointer-events:none;
+}
+.streak-toast.show {
+  transform:translateX(-50%) translateY(0);
+  opacity:1; pointer-events:all;
+}
+.streak-toast.hide {
+  transform:translateX(-50%) translateY(120px);
+  opacity:0; pointer-events:none;
+  transition:transform 0.35s ease-in, opacity 0.3s ease;
+}
+.toast-flame { font-size:32px; flex-shrink:0; filter:drop-shadow(0 0 8px rgba(255,160,0,0.6)); }
+.toast-body { flex:1; }
+.toast-title { font-family:'Cinzel',serif; font-size:15px; font-weight:700; color:var(--gold-light); letter-spacing:0.03em; margin-bottom:3px; }
+.toast-sub { font-size:13px; color:var(--text-dim); line-height:1.4; }
+.toast-dots { display:flex; gap:5px; margin-top:8px; }
+.toast-dot { width:28px; height:28px; border-radius:50%; border:1.5px solid rgba(212,160,23,0.25); display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-dim); font-family:'Cinzel',serif; flex-shrink:0; }
+.toast-dot.done { background:linear-gradient(135deg,#d4a017,#f0c040); border-color:var(--gold); color:#1a0f00; font-weight:700; font-size:11px; box-shadow:0 0 8px rgba(212,160,23,0.4); }
+.toast-dot.today { border-color:var(--gold-lt); color:var(--gold-lt); box-shadow:0 0 0 3px rgba(212,160,23,0.2); animation:toast-today-pulse 1.8s ease-in-out infinite; }
+@keyframes toast-today-pulse { 0%,100%{box-shadow:0 0 0 3px rgba(212,160,23,0.2)} 50%{box-shadow:0 0 0 5px rgba(212,160,23,0.06)} }
+.toast-close { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.06); border:none; color:var(--text-dim); font-size:16px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+
 ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
 </style>
 </head>
 <body>
 
 <div class="stars" id="stars"></div>
+
+
+
+<!-- ===== STREAK TOAST ===== -->
+<div class="streak-toast" id="streakToast">
+  <div class="toast-flame">🔥</div>
+  <div class="toast-body">
+    <div class="toast-title" id="toastTitle">Day 1 streak!</div>
+    <div class="toast-sub" id="toastSub">Your connection with Gabriel begins.</div>
+    <div class="toast-dots" id="toastDots"></div>
+  </div>
+  <button class="toast-close" onclick="closeStreakToast()">✕</button>
+</div>
+
 <div class="shimmer-overlay" id="shimmer"></div>
 
 <!-- Celebration -->
@@ -621,6 +669,7 @@ window.addEventListener('load', () => {
     dash.classList.add('active');
     dash.style.opacity = '1';
     updateDashboardPills();
+    showStreakToast();
   }
 });
 
@@ -722,6 +771,7 @@ async function enterPortal() {
   btn.disabled = false;
   updateDashboardPills();
   goTo('dashboard');
+  setTimeout(showStreakToast, 800);
 }
 
 // ===== DASHBOARD =====
@@ -877,6 +927,76 @@ function launchParticles() {
     container.appendChild(p);
   }
   setTimeout(() => { container.classList.remove('active'); container.innerHTML=''; }, 2500);
+}
+
+
+
+
+// ===== STREAK TOAST =====
+function showStreakToast() {
+  const name = localStorage.getItem('ap_name');
+  if (!name) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  if (localStorage.getItem('ap_streak_seen') === today) return;
+  localStorage.setItem('ap_streak_seen', today);
+
+  const joinDate = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
+  const dayNum = Math.max(1, Math.floor((new Date() - joinDate) / 86400000) + 1);
+
+  // Título
+  const titles = {
+    1: 'Day 1 — Journey begins! ✦',
+    2: '2-day streak! 🔥',
+    3: '3 days — Dream Interpretation unlocked!',
+    7: '7-day streak — letter from Gabriel unlocked!',
+    14: '14 days — Sacred Name Ritual unlocked!',
+    21: '21 days — Healing Ceremony unlocked!',
+    30: '30 days — The Prophecy is yours!'
+  };
+  const subs = {
+    1: 'Gabriel is with you from the very first step.',
+    2: 'Two days in a row. Your angel notices.',
+    3: 'A new gift awaits you in Your Journey.',
+    7: 'A full week. Check Your Journey for a special gift.',
+    14: 'Your devotion has unlocked something sacred.',
+    21: 'Three weeks of connection. Gabriel is proud.',
+    30: 'A full month. The deepest gift is ready.'
+  };
+  const defaultSubs = [
+    'Every return strengthens the bond.',
+    'Gabriel has been watching over you.',
+    'Your consistency is a form of prayer.',
+    'Heaven notices every time you show up.',
+  ];
+
+  document.getElementById('toastTitle').textContent = titles[dayNum] || `${dayNum}-day streak! 🔥`;
+  document.getElementById('toastSub').textContent = subs[dayNum] || defaultSubs[dayNum % defaultSubs.length];
+
+  // Dots — mostra 7, compactos
+  const dotsEl = document.getElementById('toastDots');
+  dotsEl.innerHTML = '';
+  const show = Math.min(7, Math.max(dayNum + 1, 4));
+  for (let i = 1; i <= show; i++) {
+    const d = document.createElement('div');
+    d.className = 'toast-dot' + (i < dayNum ? ' done' : i === dayNum ? ' today' : '');
+    d.textContent = i < dayNum ? '✦' : i;
+    dotsEl.appendChild(d);
+  }
+
+  // Aparece após 800ms (dá tempo do dashboard carregar)
+  setTimeout(() => {
+    document.getElementById('streakToast').classList.add('show');
+    // Some automaticamente após 5s
+    setTimeout(closeStreakToast, 5000);
+  }, 800);
+}
+
+function closeStreakToast() {
+  const el = document.getElementById('streakToast');
+  el.classList.remove('show');
+  el.classList.add('hide');
+  setTimeout(() => el.classList.remove('hide'), 400);
 }
 
 // ===== THEME =====
