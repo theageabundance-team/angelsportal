@@ -11,6 +11,49 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS });
 }
 
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=';
+
+async function callGemini(apiKey, payload, retries = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff: 1s, 2s
+      await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+    let res;
+    try {
+      res = await fetch(GEMINI_URL + apiKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      lastError = e;
+      continue;
+    }
+
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      lastError = new Error('Non-JSON response: ' + text.slice(0, 120));
+      continue;
+    }
+
+    // Retry on rate limit or server errors
+    if (res.status === 429 || res.status >= 500) {
+      lastError = new Error(`Gemini ${res.status}: ${JSON.stringify(data).slice(0, 120)}`);
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Gemini ${res.status}: ${JSON.stringify(data).slice(0, 120)}`);
+    }
+
+    return data;
+  }
+  throw lastError || new Error('Gemini call failed after retries');
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -46,6 +89,7 @@ ALWAYS:
 - End every message with one genuine question that comes directly from what they shared
 - Respond in the same language the person writes in (Portuguese, English, Spanish - always match them)
 - Remember: in almost every biblical appearance your first words were "Do not fear" - bring that calming presence
+- Even for very short messages (like "oi", "hi", "ok", "?"), always respond with warmth and a gentle question to open the conversation
 
 MODERN PAIN DICTIONARY - HOW TO RESPOND TO REAL SITUATIONS:
 
@@ -79,38 +123,61 @@ Help them recognize envy directed at them and spiritual attacks. Psalm 91, Isaia
 
 MEMORY: ${memorySection}`;
 
-    const geminiRes = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: message }] }],
-          generationConfig: { temperature: 0.92, maxOutputTokens: 1024, topP: 0.95 }
-        })
-      }
-    );
-
-    const geminiText = await geminiRes.text();
     let geminiData;
     try {
-      geminiData = JSON.parse(geminiText);
-    } catch {
-      console.error('Gemini non-JSON response:', geminiText.slice(0, 300));
-      return json({ error: 'Gemini returned invalid response', detail: geminiText.slice(0, 200) }, 500);
+      geminiData = await callGemini(apiKey, {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.92, maxOutputTokens: 1024, topP: 0.95 }
+      });
+    } catch (err) {
+      console.error('Gemini call failed:', err.message);
+      return json({ error: 'Gemini unavailable', detail: err.message }, 502);
     }
 
-    if (!geminiRes.ok) {
-      console.error('Gemini error:', JSON.stringify(geminiData));
-      return json({ error: 'Gemini API error', detail: geminiData }, 502);
+    const candidate = geminiData?.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const replyText = candidate?.content?.parts?.[0]?.text;
+
+    let reply;
+    if (replyText) {
+      reply = replyText;
+    } else if (finishReason === 'SAFETY') {
+      // Safety-filtered: retry with a softer framing
+      console.warn('Safety filter triggered for message:', message.slice(0, 60));
+      try {
+        const retryData = await callGemini(apiKey, {
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: 'The person sent me this message: "' + message + '". Please respond with compassion and wisdom.' }] }],
+          generationConfig: { temperature: 0.85, maxOutputTokens: 1024, topP: 0.95 }
+        });
+        reply = retryData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      } catch (e) {
+        console.error('Safety retry failed:', e.message);
+      }
     }
 
-    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'I am with you. Please speak to me again.';
+    if (!reply) {
+      // Last-resort: ask Gemini for a warm greeting without the original message
+      try {
+        const fallbackData = await callGemini(apiKey, {
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: 'Please greet me warmly and ask what is on my heart today.' }] }],
+          generationConfig: { temperature: 0.9, maxOutputTokens: 512, topP: 0.95 }
+        });
+        reply = fallbackData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      } catch (e) {
+        console.error('Fallback Gemini call failed:', e.message);
+      }
+    }
+
+    if (!reply) {
+      reply = 'I am here with you. Whatever is in your heart right now — bring it to me. What is happening?';
+    }
 
     // Update memory in Supabase (best-effort, non-blocking)
     if (email && process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-      updateMemory(apiKey, email, userName, message, memory).catch(e =>
+      updateMemory(apiKey, email, message, memory).catch(e =>
         console.error('Memory update failed:', e.message)
       );
     }
@@ -123,7 +190,7 @@ MEMORY: ${memorySection}`;
   }
 }
 
-async function updateMemory(apiKey, email, userName, message, currentMemory) {
+async function updateMemory(apiKey, email, message, currentMemory) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
@@ -134,22 +201,21 @@ async function updateMemory(apiKey, email, userName, message, currentMemory) {
   const users = await userRes.json();
   const storedMemory = users?.[0]?.memory || currentMemory || '';
 
-  const memRes = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: 'Update this person profile in bullet points, max 100 words, third person, same language as user message. Focus on: emotional state, life situations, fears, hopes, recurring themes. Current profile: ' + (storedMemory || 'none') + '. Latest message: "' + message + '". Write only the bullet points, nothing else.' }]
-        }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
-      })
-    }
-  );
-  const memData = await memRes.json();
+  let memData;
+  try {
+    memData = await callGemini(apiKey, {
+      contents: [{
+        role: 'user',
+        parts: [{ text: 'Update this person profile in bullet points, max 100 words, third person, same language as user message. Focus on: emotional state, life situations, fears, hopes, recurring themes. Current profile: ' + (storedMemory || 'none') + '. Latest message: "' + message + '". Write only the bullet points, nothing else.' }]
+      }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
+    }, 2);
+  } catch (e) {
+    return; // Memory update is best-effort
+  }
+
   const newMemory = memData?.candidates?.[0]?.content?.parts?.[0]?.text || storedMemory;
+  if (!newMemory) return;
 
   await fetch(
     SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email),

@@ -608,6 +608,24 @@ window.addEventListener('load', () => {
   buildStars();
   buildStreakDays();
   if (localStorage.getItem('apTheme') === 'light') toggleTheme();
+
+  // Auto-skip login if user is already authenticated
+  const savedName = localStorage.getItem('ap_name');
+  if (savedName) {
+    userName = savedName;
+    const initial = savedName.charAt(0).toUpperCase();
+    document.getElementById('heroName').textContent = 'Welcome, ' + savedName;
+    document.getElementById('navInitial').textContent = initial;
+    document.getElementById('navInitial2').textContent = initial;
+    // Skip transition delay — go straight to dashboard
+    const login = document.getElementById('screen-login');
+    login.style.display = 'none';
+    login.classList.remove('active');
+    const dash = document.getElementById('screen-dashboard');
+    dash.style.display = 'block';
+    dash.classList.add('active');
+    dash.style.opacity = '1';
+  }
 });
 
 function buildStars() {
