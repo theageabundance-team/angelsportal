@@ -638,7 +638,10 @@ let isDark = true;
 let userName = 'Ana';
 let intentionDone = false;
 let modalWeek = 0, modalDay = 0;
-let prayed = JSON.parse(localStorage.getItem('ap_prayed') || '{}');
+// Mescla progresso local + cloud (ap_prayers vem do login com dados do Supabase)
+const _localPrayed = JSON.parse(localStorage.getItem('ap_prayed') || '{}');
+const _cloudPrayed = JSON.parse(localStorage.getItem('ap_prayers') || '{}');
+let prayed = Object.assign({}, _localPrayed, _cloudPrayed);
 
 function getJoinDate() {
   const raw = localStorage.getItem('ap_joined');
@@ -772,8 +775,14 @@ async function enterPortal() {
       localStorage.setItem('ap_name', data.user.name);
       localStorage.setItem('ap_email', data.user.email);
       localStorage.setItem('ap_memory', data.user.memory || '');
-      localStorage.setItem('ap_prayers', JSON.stringify(data.user.prayers_done || {}));
-      localStorage.setItem('ap_rituals', JSON.stringify(data.user.rituals_done || {}));
+      // Salva do Supabase — esses são a fonte de verdade
+      const cloudPrayers = data.user.prayers_done || {};
+      const cloudRituals = data.user.rituals_done || {};
+      localStorage.setItem('ap_prayers', JSON.stringify(cloudPrayers));
+      localStorage.setItem('ap_rituals', JSON.stringify(cloudRituals));
+      // Mescla com qualquer progresso local (dando prioridade ao cloud)
+      const mergedPrayed = Object.assign({}, JSON.parse(localStorage.getItem('ap_prayed')||'{}'), cloudPrayers);
+      localStorage.setItem('ap_prayed', JSON.stringify(mergedPrayed));
       localStorage.setItem('ap_streak', data.user.streak || 0);
       localStorage.setItem('ap_joined', data.user.created_at);
     }
