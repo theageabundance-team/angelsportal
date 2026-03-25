@@ -297,8 +297,8 @@ window.addEventListener('load', async () => {
   setTimeout(() => {
     removeTyping();
     appendMsg(msg, 'angel');
-    // Seed history with opening so Gabriel has context from message #1
-    pushHistory('model', msg);
+    // Opening is NOT added to history — Gemini requires contents to start with
+    // a user turn. History begins with the first real user message.
   }, 1200);
 });
 </script>

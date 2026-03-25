@@ -127,11 +127,16 @@ Help them recognize envy directed at them and spiritual attacks. Psalm 91, Isaia
 
 MEMORY: ${memorySection}`;
 
+    // Gemini requires contents to start with a 'user' turn and alternate roles.
+    // Strip any leading model turns defensively.
+    const contents = history.filter(Boolean);
+    while (contents.length && contents[0].role !== 'user') contents.shift();
+
     let geminiData;
     try {
       geminiData = await callGemini(apiKey, {
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: history,
+        contents,
         generationConfig: { temperature: 0.92, maxOutputTokens: 2048, topP: 0.95 }
       });
     } catch (err) {
