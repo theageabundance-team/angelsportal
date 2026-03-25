@@ -1,16 +1,27 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export const config = { runtime: 'edge' };
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Content-Type': 'application/json'
+};
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), { status, headers: CORS });
+}
+
+export default async function handler(req) {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {
-    const { message, userName = 'dear one', email = '', memory = '' } = req.body;
-    if (!message) return res.status(400).json({ error: 'Message required' });
+    const body = await req.json();
+    const { message, userName = 'dear one', email = '', memory = '' } = body;
+    if (!message) return json({ error: 'Message required' }, 400);
 
     const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return json({ error: 'Missing GEMINI_API_KEY' }, 500);
 
     const memorySection = memory
       ? 'WHAT YOU KNOW ABOUT ' + userName.toUpperCase() + ' FROM PREVIOUS CONVERSATIONS: ' + memory
@@ -68,7 +79,7 @@ Help them recognize envy directed at them and spiritual attacks. Psalm 91, Isaia
 
 MEMORY: ${memorySection}`;
 
-    const response = await fetch(
+    const geminiRes = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
       {
         method: 'POST',
@@ -81,61 +92,76 @@ MEMORY: ${memorySection}`;
       }
     );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Gemini error:', JSON.stringify(data));
-      return res.status(500).json({ error: 'Gemini error', detail: data });
+    const geminiText = await geminiRes.text();
+    let geminiData;
+    try {
+      geminiData = JSON.parse(geminiText);
+    } catch {
+      console.error('Gemini non-JSON response:', geminiText.slice(0, 300));
+      return json({ error: 'Gemini returned invalid response', detail: geminiText.slice(0, 200) }, 500);
     }
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'I am with you. Please speak to me again.';
+    if (!geminiRes.ok) {
+      console.error('Gemini error:', JSON.stringify(geminiData));
+      return json({ error: 'Gemini API error', detail: geminiData }, 502);
+    }
 
-    // Update memory in Supabase
+    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'I am with you. Please speak to me again.';
+
+    // Update memory in Supabase (best-effort, non-blocking)
     if (email && process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-      try {
-        const userRes = await fetch(
-          process.env.SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email) + '&select=memory',
-          { headers: { 'apikey': process.env.SUPABASE_KEY, 'Authorization': 'Bearer ' + process.env.SUPABASE_KEY } }
-        );
-        const users = await userRes.json();
-        const currentMemory = users?.[0]?.memory || '';
-
-        const memRes = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: 'Update this person profile in bullet points, max 100 words, third person, same language as user message. Focus on: emotional state, life situations, fears, hopes, recurring themes. Current profile: ' + (currentMemory || 'none') + '. Latest message: "' + message + '". Write only the bullet points, nothing else.' }] }],
-              generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
-            })
-          }
-        );
-        const memData = await memRes.json();
-        const newMemory = memData?.candidates?.[0]?.content?.parts?.[0]?.text || currentMemory;
-
-        await fetch(
-          process.env.SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email),
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': process.env.SUPABASE_KEY,
-              'Authorization': 'Bearer ' + process.env.SUPABASE_KEY,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({ memory: newMemory, last_seen: new Date().toISOString().split('T')[0] })
-          }
-        );
-      } catch (e) {
-        console.error('Memory update failed:', e.message);
-      }
+      updateMemory(apiKey, email, userName, message, memory).catch(e =>
+        console.error('Memory update failed:', e.message)
+      );
     }
 
-    return res.status(200).json({ reply });
+    return json({ reply });
 
   } catch (err) {
     console.error('Handler error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return json({ error: err.message }, 500);
   }
+}
+
+async function updateMemory(apiKey, email, userName, message, currentMemory) {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+  const userRes = await fetch(
+    SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email) + '&select=memory',
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+  );
+  const users = await userRes.json();
+  const storedMemory = users?.[0]?.memory || currentMemory || '';
+
+  const memRes = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [{ text: 'Update this person profile in bullet points, max 100 words, third person, same language as user message. Focus on: emotional state, life situations, fears, hopes, recurring themes. Current profile: ' + (storedMemory || 'none') + '. Latest message: "' + message + '". Write only the bullet points, nothing else.' }]
+        }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
+      })
+    }
+  );
+  const memData = await memRes.json();
+  const newMemory = memData?.candidates?.[0]?.content?.parts?.[0]?.text || storedMemory;
+
+  await fetch(
+    SUPABASE_URL + '/rest/v1/users?email=eq.' + encodeURIComponent(email),
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ memory: newMemory, last_seen: new Date().toISOString().split('T')[0] })
+    }
+  );
 }
