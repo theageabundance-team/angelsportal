@@ -236,7 +236,7 @@ body::before {
 
 <!-- Streak -->
 <div class="streak-display">
-  <div class="streak-number">7</div>
+  <div class="streak-number">1</div>
   <div class="streak-label">Days of Connection</div>
   <div class="streak-days" id="streakDays"></div>
 </div>
@@ -326,14 +326,44 @@ for (let i = 0; i < 120; i++) {
   el.appendChild(s);
 }
 
-// Streak days
+// Streak e unlocks calculados a partir da data de cadastro real
+const JOIN_DATE_J = new Date(localStorage.getItem('ap_joined') || new Date().toISOString());
+const dayNumJ = Math.max(1, Math.floor((new Date() - JOIN_DATE_J) / 86400000) + 1);
+
+// Atualiza o número grande de streak
+document.querySelector('.streak-number').textContent = dayNumJ;
+
+// Monta os bolinhas de dias
 const daysEl = document.getElementById('streakDays');
-for (let i = 1; i <= 10; i++) {
+daysEl.innerHTML = '';
+const totalDays = Math.min(Math.max(dayNumJ + 2, 5), 10);
+for (let i = 1; i <= totalDays; i++) {
   const d = document.createElement('div');
-  d.className = 'streak-day' + (i < 7 ? ' done' : i === 7 ? ' today' : '');
-  d.textContent = i < 7 ? '✦' : i;
+  d.className = 'streak-day' + (i < dayNumJ ? ' done' : i === dayNumJ ? ' today' : '');
+  d.textContent = i < dayNumJ ? '✦' : i;
   daysEl.appendChild(d);
 }
+
+// Atualiza os cards de unlock com progresso real
+const UNLOCK_DAYS_J = [3, 7, 14, 21, 30];
+document.querySelectorAll('.unlock-card').forEach((card, i) => {
+  const req = UNLOCK_DAYS_J[i];
+  if (!req) return;
+  const isUnlocked = dayNumJ >= req;
+  card.classList.toggle('unlocked', isUnlocked);
+  card.classList.toggle('locked', !isUnlocked);
+  const daysLabel = card.querySelector('.unlock-days');
+  if (daysLabel) daysLabel.textContent = req + ' Days — ' + (isUnlocked ? 'Unlocked' : 'Locked');
+  const badge = card.querySelector('.badge-unlocked, .badge-locked');
+  if (badge) {
+    badge.className = isUnlocked ? 'badge-unlocked' : 'badge-locked';
+    badge.textContent = isUnlocked ? 'Open ›' : '🔒 ' + (req - dayNumJ) + ' more';
+  }
+  const fill = card.querySelector('.lock-fill');
+  if (fill) fill.style.width = Math.min(100, Math.round(dayNumJ / req * 100)) + '%';
+  const pct = card.querySelector('.lock-pct');
+  if (pct) pct.textContent = dayNumJ + ' / ' + req + ' days';
+});
 </script>
 </body>
 </html>
