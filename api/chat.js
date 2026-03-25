@@ -11,10 +11,8 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS });
 }
 
-// FIX 1: Modelo correto — gemini-2.0-flash é o mais estável e rápido agora
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=';
 
-// FIX 2: Retry automático em caso de rate limit (429)
 async function callGemini(apiKey, payload, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     const res = await fetch(GEMINI_URL + apiKey, {
@@ -23,10 +21,9 @@ async function callGemini(apiKey, payload, retries = 3) {
       body: JSON.stringify(payload)
     });
 
-    // Se for rate limit, espera e tenta de novo
     if (res.status === 429) {
       if (attempt < retries) {
-        await new Promise(r => setTimeout(r, attempt * 1500)); // 1.5s, 3s...
+        await new Promise(r => setTimeout(r, attempt * 1500));
         continue;
       } else {
         throw new Error('RATE_LIMIT');
@@ -39,16 +36,57 @@ async function callGemini(apiKey, payload, retries = 3) {
     }
 
     const data = await res.json();
-
-    // FIX 3: Verifica se a resposta tem conteúdo válido antes de retornar
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!reply) {
-      // Loga o que o Gemini retornou para debug
-      console.error('Gemini response sem conteúdo:', JSON.stringify(data));
+      console.error('Gemini empty response:', JSON.stringify(data));
       throw new Error('EMPTY_RESPONSE');
     }
 
     return reply;
+  }
+}
+
+// Gera um resumo atualizado da pessoa com base nas conversas
+async function updateMemory(apiKey, userName, currentMemory, recentMessages) {
+  try {
+    const conversationText = recentMessages
+      .map(m => `${m.role === 'user' ? userName : 'Gabriel'}: ${m.text}`)
+      .join('\n');
+
+    const prompt = `You are analyzing a conversation between a person named ${userName} and their guardian angel Gabriel.
+
+Current memory profile of ${userName}:
+${currentMemory || '(no previous memory)'}
+
+Recent conversation:
+${conversationText}
+
+Based on this conversation, update the memory profile of ${userName}. Extract and synthesize:
+- Recurring emotions (loneliness, anxiety, fear, joy, etc.)
+- Life situation (family, work, relationships, health)
+- Important themes that came up
+- Any specific struggles or joys mentioned
+- What seems to matter most to this person
+
+Write the updated memory profile in the SAME LANGUAGE as the conversation above.
+Be concise but rich — this is a living profile that will help Gabriel be a better companion.
+Format as a short paragraph or two, written as notes Gabriel carries in his heart about this person.
+Do NOT include anything that wasn't actually mentioned. Do NOT invent details.`;
+
+    const res = await fetch(GEMINI_URL + apiKey, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 400 }
+      })
+    });
+
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || currentMemory;
+  } catch (e) {
+    console.error('Error updating memory:', e);
+    return currentMemory;
   }
 }
 
@@ -64,14 +102,11 @@ export default async function handler(req) {
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-    if (!apiKey) {
-      return json({ error: 'API key not configured' }, 500);
-    }
+    if (!apiKey) return json({ error: 'API key not configured' }, 500);
 
-    // Garante que o histórico está no formato certo para o Gemini
-    // (roles devem alternar user/model, não pode começar com model)
     const cleanHistory = history.filter(h => h.role && h.parts?.[0]?.text);
 
+    // 1. Gera resposta do Gabriel
     const reply = await callGemini(apiKey, {
       system_instruction: {
         parts: [{
@@ -111,14 +146,10 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
         }]
       },
       contents: cleanHistory,
-      generationConfig: {
-        temperature: 0.92,
-        maxOutputTokens: 1000,
-        topP: 0.95
-      }
+      generationConfig: { temperature: 0.92, maxOutputTokens: 1000, topP: 0.95 }
     });
 
-    // FIX 4: Salvar chat_history no Supabase de forma mais confiável
+    // 2. Salva histórico e atualiza memória em background (não bloqueia a resposta)
     if (email && SUPABASE_URL && SUPABASE_KEY) {
       const userMsg = history[history.length - 1]?.parts?.[0]?.text || '';
       const now = new Date().toISOString();
@@ -127,44 +158,53 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
         ...chatHistory,
         { role: 'user',  text: userMsg, time: now },
         { role: 'angel', text: reply,   time: now }
-      ].slice(-20); // Guarda as últimas 20 mensagens
+      ].slice(-30); // Guarda as últimas 30 mensagens
 
-      // Usa upsert para garantir que salva mesmo que o PATCH não encontre o usuário
-      fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          chat_history: newChatHistory,
-          last_seen: now
-        })
-      }).catch(e => console.error('Erro ao salvar chat_history no Supabase:', e));
+      // Roda em background — não segura a resposta
+      (async () => {
+        try {
+          // A cada 5 trocas de mensagem, atualiza a memória
+          const shouldUpdateMemory = newChatHistory.length % 10 === 0;
+          let newMemory = memory;
+
+          if (shouldUpdateMemory && newChatHistory.length >= 6) {
+            // Pega as últimas 10 mensagens para gerar o resumo
+            const recentForMemory = newChatHistory.slice(-10);
+            newMemory = await updateMemory(apiKey, userName, memory, recentForMemory);
+            console.log('Memory updated for:', email);
+          }
+
+          await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              chat_history: newChatHistory,
+              memory: newMemory,
+              last_seen: now
+            })
+          });
+        } catch (e) {
+          console.error('Background save error:', e);
+        }
+      })();
     }
 
     return json({ reply });
 
   } catch (err) {
-    console.error('Erro no chat:', err.message);
+    console.error('Chat error:', err.message);
 
-    // FIX 5: Mensagens de erro específicas por tipo de falha
     if (err.message === 'RATE_LIMIT') {
-      return json({
-        reply: 'Estou recebendo muitas mensagens ao mesmo tempo. Por favor, aguarde um momento e fale comigo novamente. 🙏'
-      });
+      return json({ reply: 'I am receiving many messages at once. Please wait a moment and speak to me again. 🙏' });
     }
-
     if (err.message === 'EMPTY_RESPONSE') {
-      return json({
-        reply: 'Sinto que algo perturbou nossa conexão por um instante. Pode repetir o que você disse?'
-      });
+      return json({ reply: 'Something disturbed our connection for a moment. Could you repeat what you said?' });
     }
-
-    return json({
-      reply: 'Sinto uma perturbação na nossa conexão agora. Tente novamente em alguns segundos.'
-    });
+    return json({ reply: 'I sense a disturbance in our connection. Please try again in a few seconds.' });
   }
 }
