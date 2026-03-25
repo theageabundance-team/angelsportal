@@ -355,7 +355,23 @@ const RITUALS = [
   { num:15, name:`The Gratitude Feast`, ritual:`Prepare a special meal, thanking God for everything you have.`, benefits:`The benefit of this ritual is the golden seal against envy. Gratitude is the only energy that envy cannot withstand, because gratitude recognizes abundance while envy focuses on lack. By celebrating what you already have, you seal your life with a frequency of fullness that attracts even more blessings.\n\nThe family benefit is the strengthening of bonds. A meal made with gratitude nourishes both body and soul, generating positive memories that serve as emotional fuel for difficult days. This final ritual consolidates all others, transforming protection into a joyful lifestyle under the light of Archangel Gabriel.` },
 ]
 
-let done = JSON.parse(localStorage.getItem('ap_rituals')||'{}');
+// Mescla progresso local com o do Supabase (ap_rituals vem do login)
+const localRituals = JSON.parse(localStorage.getItem('ap_rituals')||'{}');
+const cloudRituals = JSON.parse(localStorage.getItem('ap_rituals_cloud')||
+  localStorage.getItem('ap_rituals')||'{}');
+// ap_rituals é salvo no login com dados do Supabase — usar como fonte de verdade
+let done = Object.assign({}, localRituals); 
+const USER_EMAIL_R = localStorage.getItem('ap_email') || '';
+
+// Sincroniza rituals_done com Supabase em background
+function syncRitualsToCloud() {
+  if (!USER_EMAIL_R) return;
+  fetch('/api/progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: USER_EMAIL_R, rituals_done: done })
+  }).catch(e => console.error('Sync rituals error:', e));
+}
 let modalIdx = 0;
 
 // Day 1-indexed from join date real do cadastro
@@ -442,6 +458,7 @@ function closeModal(){ document.getElementById('ritualModal').classList.remove('
 function markDone(){
   if(done[modalIdx])return;
   done[modalIdx]=true; localStorage.setItem('ap_rituals',JSON.stringify(done));
+  syncRitualsToCloud();
   const btn=document.getElementById('modalDoneBtn');
   btn.textContent='✦ Ritual completed'; btn.classList.add('done');
   showCelebration();
