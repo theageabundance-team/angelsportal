@@ -8,8 +8,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Angels Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script>
+// Roda antes da renderização — evita flash da tela de login
+if (localStorage.getItem('ap_name')) {
+  document.documentElement.dataset.loggedIn = '1';
+}
+</script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+/* Esconde login antes de renderizar se já logado — evita flash */
+html[data-logged-in="1"] #screen-login { display:none !important; opacity:0 !important; }
 :root {
   --bg:#060b22; --bg-mid:#0d1338; --bg-card:#111842; --bg-inner:#0a1030;
   --bg-nav:rgba(6,11,34,0.96); --bg-orb:rgba(212,160,23,0.08);
@@ -423,7 +431,7 @@ html.light .today-title, html.light .today-date, html.light .today-week-theme { 
 </div>
 
 <!-- ===== LOGIN ===== -->
-<div class="screen active" id="screen-login">
+<div class="screen" id="screen-login">
   <div class="orb"></div>
   <div class="corner tl"><svg viewBox="0 0 110 110" fill="none"><path d="M8 102 L8 8 L102 8" stroke="#d4a017" stroke-width="1"/><path d="M8 55 L8 8 L55 8" stroke="#d4a017" stroke-width="0.5" opacity="0.5"/><circle cx="8" cy="8" r="3" fill="#d4a017" opacity="0.7"/></svg></div>
   <div class="corner tr"><svg viewBox="0 0 110 110" fill="none"><path d="M8 102 L8 8 L102 8" stroke="#d4a017" stroke-width="1"/><path d="M8 55 L8 8 L55 8" stroke="#d4a017" stroke-width="0.5" opacity="0.5"/><circle cx="8" cy="8" r="3" fill="#d4a017" opacity="0.7"/></svg></div>
@@ -657,7 +665,6 @@ window.addEventListener('load', () => {
   buildStreakDays();
   if (localStorage.getItem('apTheme') === 'light') toggleTheme();
 
-  // Auto-skip login if user is already authenticated
   const savedName = localStorage.getItem('ap_name');
   if (savedName) {
     userName = savedName;
@@ -675,6 +682,16 @@ window.addEventListener('load', () => {
     dash.style.opacity = '1';
     updateDashboardPills();
     showStreakToast();
+  } else {
+    // Usuário não logado — mostrar tela de login
+    const login = document.getElementById('screen-login');
+    login.style.display = 'flex';
+    login.style.flexDirection = 'column';
+    login.style.alignItems = 'center';
+    login.style.justifyContent = 'center';
+    login.style.padding = '32px 24px';
+    login.classList.add('active');
+    setTimeout(() => { login.style.opacity = '1'; }, 20);
   }
 });
 
