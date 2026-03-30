@@ -46,7 +46,6 @@ async function callGemini(apiKey, payload, retries = 3) {
   }
 }
 
-// Gera um resumo atualizado da pessoa com base nas conversas
 async function updateMemory(apiKey, userName, currentMemory, recentMessages) {
   try {
     const conversationText = recentMessages
@@ -90,6 +89,86 @@ Do NOT include anything that wasn't actually mentioned. Do NOT invent details.`;
   }
 }
 
+async function saveToSupabase(SUPABASE_URL, SUPABASE_KEY, apiKey, email, userName, userMsg, reply, chatHistory, memory) {
+  try {
+    const now = new Date().toISOString();
+
+    // Busca histórico atual do Supabase para fazer merge correto
+    let existingHistory = [];
+    let existingMemory = memory;
+
+    const fetchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=chat_history,memory`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+
+    if (fetchRes.ok) {
+      const users = await fetchRes.json();
+      if (users && users.length > 0) {
+        const raw = users[0].chat_history;
+        if (Array.isArray(raw)) {
+          existingHistory = raw.filter(m => m && m.role && m.text);
+        } else if (typeof raw === 'string' && raw.length > 0) {
+          try { existingHistory = JSON.parse(raw).filter(m => m && m.role && m.text); } catch {}
+        }
+        if (users[0].memory) existingMemory = users[0].memory;
+      }
+    }
+
+    // Merge: banco + sessão atual (sem duplicatas) + mensagem nova
+    const newMessages = [
+      { role: 'user',  text: userMsg, time: now },
+      { role: 'angel', text: reply,   time: now }
+    ];
+
+    const existingTexts = new Set(existingHistory.map(m => `${m.role}|${m.text}`));
+    const sessionNewMessages = chatHistory.filter(m => !existingTexts.has(`${m.role}|${m.text}`));
+
+    const mergedHistory = [
+      ...existingHistory,
+      ...sessionNewMessages,
+      ...newMessages
+    ].slice(-50);
+
+    // Atualiza memória a cada 8 mensagens ou se ainda não tem memória
+    let newMemory = existingMemory;
+    const shouldUpdateMemory = !existingMemory || mergedHistory.length % 8 === 0;
+
+    if (shouldUpdateMemory && mergedHistory.length >= 4) {
+      const recentForMemory = mergedHistory.slice(-10);
+      newMemory = await updateMemory(apiKey, userName, existingMemory, recentForMemory);
+      console.log('Memory updated for:', email);
+    }
+
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          chat_history: mergedHistory,
+          memory: newMemory,
+          last_seen: now
+        })
+      }
+    );
+
+    console.log(`Saved ${mergedHistory.length} messages for ${email} — status ${patchRes.status}`);
+  } catch (e) {
+    console.error('Save error:', e);
+  }
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -105,6 +184,7 @@ export default async function handler(req) {
     if (!apiKey) return json({ error: 'API key not configured' }, 500);
 
     const cleanHistory = history.filter(h => h.role && h.parts?.[0]?.text);
+    const userMsg = history[history.length - 1]?.parts?.[0]?.text || '';
 
     // 1. Gera resposta do Gabriel
     const reply = await callGemini(apiKey, {
@@ -149,93 +229,11 @@ Memory from past conversations: ${memory || 'This appears to be your first conve
       generationConfig: { temperature: 0.92, maxOutputTokens: 1000, topP: 0.95 }
     });
 
-    // 2. Salva histórico e atualiza memória em background (não bloqueia a resposta)
+    // 2. Salva no Supabase de forma SÍNCRONA — antes do return
+    // IMPORTANTE: Edge Functions no Vercel cortam tudo após o return,
+    // então qualquer código em background (async IIFE) nunca executa.
     if (email && SUPABASE_URL && SUPABASE_KEY) {
-      const userMsg = history[history.length - 1]?.parts?.[0]?.text || '';
-      const now = new Date().toISOString();
-
-      // Roda em background — não segura a resposta
-      (async () => {
-        try {
-          // FIX: Busca o histórico atual do Supabase antes de salvar
-          // Isso garante que as mensagens de sessões anteriores não sejam perdidas
-          let existingHistory = [];
-          let existingMemory = memory;
-
-          const fetchRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=chat_history,memory`,
-            {
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-              }
-            }
-          );
-
-          if (fetchRes.ok) {
-            const users = await fetchRes.json();
-            if (users && users.length > 0) {
-              const raw = users[0].chat_history;
-              if (Array.isArray(raw)) {
-                existingHistory = raw.filter(m => m && m.role && m.text);
-              } else if (typeof raw === 'string' && raw.length > 0) {
-                try { existingHistory = JSON.parse(raw).filter(m => m && m.role && m.text); } catch {}
-              }
-              // Usa a memória do banco (mais atualizada que a do frontend)
-              if (users[0].memory) existingMemory = users[0].memory;
-            }
-          }
-
-          // FIX: Faz merge do histórico existente no banco + as novas mensagens da sessão
-          // chatHistory do frontend pode ter duplicatas com o que já está salvo,
-          // então usamos existingHistory como base e adicionamos só as mensagens novas
-          const newMessages = [
-            { role: 'user',  text: userMsg, time: now },
-            { role: 'angel', text: reply,   time: now }
-          ];
-
-          // Deduplica: remove do chatHistory do frontend o que já existe no banco
-          // (compara por texto + role para evitar duplicatas entre sessões)
-          const existingTexts = new Set(existingHistory.map(m => `${m.role}|${m.text}`));
-          const sessionNewMessages = chatHistory.filter(m => !existingTexts.has(`${m.role}|${m.text}`));
-
-          const mergedHistory = [
-            ...existingHistory,
-            ...sessionNewMessages,
-            ...newMessages
-          ].slice(-50); // Guarda as últimas 50 mensagens
-
-          // FIX: Atualiza memória a cada 4 trocas novas (mais frequente) OU se for a 1ª vez
-          const shouldUpdateMemory = !existingMemory || mergedHistory.length % 8 === 0;
-          let newMemory = existingMemory;
-
-          if (shouldUpdateMemory && mergedHistory.length >= 4) {
-            // Usa as últimas 10 mensagens para gerar o resumo
-            const recentForMemory = mergedHistory.slice(-10);
-            newMemory = await updateMemory(apiKey, userName, existingMemory, recentForMemory);
-            console.log('Memory updated for:', email);
-          }
-
-          await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({
-              chat_history: mergedHistory,
-              memory: newMemory,
-              last_seen: now
-            })
-          });
-
-          console.log(`Saved ${mergedHistory.length} messages for ${email}`);
-        } catch (e) {
-          console.error('Background save error:', e);
-        }
-      })();
+      await saveToSupabase(SUPABASE_URL, SUPABASE_KEY, apiKey, email, userName, userMsg, reply, chatHistory, memory);
     }
 
     return json({ reply });
