@@ -43,7 +43,7 @@ YOUR TASK:
 - End with one sentence that feels like a blessing or a gentle message to carry into the day.
 
 LANGUAGE: Respond in the same language the dream is written in.
-LENGTH: 3 to 4 paragraphs. Rich but not overwhelming. No bullet points, always flowing prose.
+LENGTH: 2 to 3 paragraphs maximum. Each paragraph 2-4 sentences. Never cut off mid-sentence — always complete your thought fully before ending.
 TONE: Intimate, mystical, deeply personal. Never clinical or generic.`;
 
     const res = await fetch(GEMINI_URL + apiKey, {
@@ -52,7 +52,7 @@ TONE: Intimate, mystical, deeply personal. Never clinical or generic.`;
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: dream }] }],
-        generationConfig: { temperature: 0.95, maxOutputTokens: 900, topP: 0.95 }
+        generationConfig: { temperature: 0.95, maxOutputTokens: 1500, topP: 0.95 }
       })
     });
 
