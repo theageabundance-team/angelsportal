@@ -137,7 +137,7 @@ async function saveToSupabase(SUPABASE_URL, SUPABASE_KEY, apiKey, email, userNam
 
     // Atualiza memória a cada 8 mensagens ou se ainda não tem memória
     let newMemory = existingMemory;
-    const shouldUpdateMemory = !existingMemory || mergedHistory.length % 8 === 0;
+    const shouldUpdateMemory = !existingMemory || mergedHistory.length % 4 === 0;
 
     if (shouldUpdateMemory && mergedHistory.length >= 4) {
       const recentForMemory = mergedHistory.slice(-10);
