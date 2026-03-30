@@ -493,8 +493,8 @@ document.querySelectorAll('.unlock-card').forEach((card, i) => {
     <div class="dream-result" id="dreamResult">
       <div class="dream-result-label">Gabriel's Interpretation</div>
       <div id="dreamResultText"></div>
-      <button class="modal-new-btn" onclick="resetDreamModal()">✦ Interpret another dream</button>
     </div>
+    <button class="modal-new-btn" id="newDreamBtn" style="display:none;margin-top:14px;" onclick="resetDreamModal()">✦ Interpret another dream</button>
   </div>
 </div>
 
@@ -519,6 +519,7 @@ function handleOverlayClick(e) {
 function resetDreamModal() {
   document.getElementById('dreamText').value = '';
   document.getElementById('dreamResult').classList.remove('visible');
+  document.getElementById('newDreamBtn').style.display = 'none';
   document.getElementById('dreamInputArea').style.display = 'block';
   document.getElementById('dreamSubtitle').style.display = 'block';
   document.getElementById('dreamResultText').innerHTML = '';
@@ -566,6 +567,7 @@ async function interpretDream() {
     resultEl.classList.add('visible');
 
     await typeWords(textEl, data.reply);
+    document.getElementById('newDreamBtn').style.display = 'block';
 
   } catch (err) {
     console.error(err);
@@ -574,6 +576,7 @@ async function interpretDream() {
     document.getElementById('dreamResultText').textContent = 'Gabriel could not reach through at this moment. Please try again.';
     document.getElementById('dreamResult').classList.add('visible');
     document.getElementById('dreamInputArea').style.display = 'none';
+    document.getElementById('newDreamBtn').style.display = 'block';
   }
 }
 </script>
