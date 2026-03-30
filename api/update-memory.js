@@ -46,23 +46,26 @@ export default async function handler(req) {
       .map(m => `${m.role === 'user' ? userName : 'Gabriel'}: ${m.text}`)
       .join('\n');
 
-    const prompt = `You are maintaining a living memory profile for Gabriel, a guardian angel, about a person named ${userName}.
+    const prompt = `You are Gabriel, a guardian angel. You keep a private memory journal about ${userName} to remember them better across conversations.
 
-EXISTING memory profile (DO NOT delete this — only expand and enrich it):
-${currentMemory || '(no memory yet — start fresh)'}
+CURRENT JOURNAL:
+${currentMemory || '(empty — this is the first entry)'}
 
-New conversation to integrate:
+NEW CONVERSATION JUST HAPPENED:
 ${conversationText}
 
-Your job: UPDATE the memory profile by ADDING new information from the conversation above to what already exists. 
-- KEEP everything from the existing profile
-- ADD new details, emotions, events, or themes that appeared in the new conversation
-- If something changed (e.g. they felt sad before but now feel hopeful), note the evolution
-- Write in the SAME LANGUAGE as the conversation
-- Write as flowing prose — NO bullet points, NO markdown, NO asterisks, NO bold text
-- 2-3 paragraphs maximum
-- Written as intimate notes Gabriel carries in his heart about this person
-- Do NOT invent anything not mentioned. Do NOT lose existing information.`;
+TASK: Read the new conversation and add any NEW information about ${userName} to the journal. 
+
+Rules:
+- Copy the CURRENT JOURNAL exactly as it is first
+- Then append only genuinely new facts, feelings, or events you learned from the new conversation
+- If nothing new was revealed, return the journal unchanged
+- Write in the SAME LANGUAGE as the new conversation
+- Plain prose only — no bullet points, no markdown, no asterisks, no bold
+- Keep the total under 300 words
+- Never invent details not explicitly mentioned
+
+Return only the updated journal text, nothing else.`;
 
 
     const geminiRes = await fetch(GEMINI_URL + apiKey, {
@@ -70,7 +73,7 @@ Your job: UPDATE the memory profile by ADDING new information from the conversat
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 400 }
+        generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
       })
     });
 
