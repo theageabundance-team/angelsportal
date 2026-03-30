@@ -275,6 +275,19 @@ async function sendMessage() {
 
     recordTurn('angel', reply, getTime());
 
+    // Dispara update de memória de forma independente — não bloqueia o chat
+    if (USER_EMAIL && data.mergedHistory?.length >= 4) {
+      fetch('/api/update-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: USER_EMAIL,
+          userName: USER_NAME,
+          recentMessages: data.mergedHistory.slice(-10)
+        })
+      }).catch(() => {});
+    }
+
   } catch (err) {
     removeTyping();
     console.error(err);
