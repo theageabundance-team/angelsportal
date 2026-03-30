@@ -204,6 +204,18 @@ function recordTurn(role, text, time) {
   if (displayHistory.length > MAX_DISPLAY) displayHistory.splice(0, 1);
 }
 
+// Digita o texto palavra por palavra na bolha
+async function typeWords(bubble, text) {
+  const words = text.split(' ');
+  let current = '';
+  for (let i = 0; i < words.length; i++) {
+    current += (i === 0 ? '' : ' ') + words[i];
+    bubble.innerHTML = current.replace(/\n/g, '<br>');
+    scrollBottom();
+    await new Promise(r => setTimeout(r, 38 + Math.random() * 30));
+  }
+}
+
 async function sendMessage() {
   if (sendBtn.disabled) return;
 
@@ -236,58 +248,32 @@ async function sendMessage() {
       })
     });
 
-    if (!res.ok) throw new Error('Server error');
-
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer    = '';
-    let fullReply = '';
-
-    // Cria a bolha do anjo vazia — o texto vai aparecer aqui palavra a palavra
+    const data = await res.json();
     removeTyping();
-    const initial = USER_NAME.charAt(0).toUpperCase();
-    const msgDiv  = document.createElement('div');
+
+    if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+
+    const reply = data.reply;
+
+    // Cria bolha vazia e digita palavra por palavra
+    const msgDiv = document.createElement('div');
     msgDiv.className = 'msg angel';
     msgDiv.innerHTML = `<div class="msg-avatar">✦</div>
       <div class="msg-content">
-        <div class="msg-bubble" id="streamBubble"></div>
-        <div class="msg-time" id="streamTime"></div>
+        <div class="msg-bubble" id="typingBubble"></div>
+        <div class="msg-time" id="typingTime"></div>
       </div>`;
     chatArea.appendChild(msgDiv);
-    const bubble = document.getElementById('streamBubble');
     scrollBottom();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    const bubble = document.getElementById('typingBubble');
+    await typeWords(bubble, reply);
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (!raw || raw === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed.error) throw new Error(parsed.error);
-          if (parsed.chunk) {
-            fullReply += parsed.chunk;
-            bubble.innerHTML = fullReply.replace(/\n/g, '<br>');
-            scrollBottom();
-          }
-        } catch (_) {}
-      }
-    }
-
-    // Finaliza: remove IDs temporários, adiciona horário
     bubble.removeAttribute('id');
-    const timeEl = document.getElementById('streamTime');
+    const timeEl = document.getElementById('typingTime');
     if (timeEl) { timeEl.textContent = getTime(); timeEl.removeAttribute('id'); }
 
-    if (fullReply) recordTurn('angel', fullReply, getTime());
+    recordTurn('angel', reply, getTime());
 
   } catch (err) {
     removeTyping();
