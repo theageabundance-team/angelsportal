@@ -81,10 +81,22 @@ Do NOT include anything that wasn't actually mentioned. Do NOT invent details.`;
       })
     });
 
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('updateMemory Gemini error:', res.status, errText);
+      return currentMemory;
+    }
+
     const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || currentMemory;
+    const updated = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!updated) {
+      console.error('updateMemory empty response:', JSON.stringify(data));
+      return currentMemory;
+    }
+    console.log('updateMemory success, length:', updated.length);
+    return updated;
   } catch (e) {
-    console.error('Error updating memory:', e);
+    console.error('Error updating memory:', e.message);
     return currentMemory;
   }
 }
@@ -135,11 +147,12 @@ async function saveToSupabase(SUPABASE_URL, SUPABASE_KEY, apiKey, email, userNam
       ...newMessages
     ].slice(-50);
 
-    // Atualiza memória a cada 8 mensagens ou se ainda não tem memória
+    // Atualiza memória sempre que houver pelo menos 2 mensagens novas
     let newMemory = existingMemory;
-    const shouldUpdateMemory = !existingMemory || mergedHistory.length % 4 === 0;
+    const newMessageCount = sessionNewMessages.length + 2; // +2 = user + angel desta troca
+    const shouldUpdateMemory = newMessageCount >= 2 && mergedHistory.length >= 4;
 
-    if (shouldUpdateMemory && mergedHistory.length >= 4) {
+    if (shouldUpdateMemory) {
       const recentForMemory = mergedHistory.slice(-10);
       newMemory = await updateMemory(apiKey, userName, existingMemory, recentForMemory);
       console.log('Memory updated for:', email);
