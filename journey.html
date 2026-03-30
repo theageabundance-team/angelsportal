@@ -219,6 +219,8 @@ body::before {
   display:flex; align-items:flex-end; justify-content:center;
   opacity:0; pointer-events:none;
   transition:opacity 0.3s ease;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 }
 .modal-overlay.open { opacity:1; pointer-events:all; }
 .modal-sheet {
@@ -229,12 +231,10 @@ body::before {
   border-radius:28px 28px 0 0;
   padding:28px 24px max(32px,env(safe-area-inset-bottom));
   position:relative;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  max-height:80vh;
+  height:auto;
+  box-sizing:border-box;
   transform:translateY(100%);
   transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);
-  box-sizing:border-box;
 }
 .modal-overlay.open .modal-sheet { transform:translateY(0); }
 .modal-sheet::before {
@@ -272,6 +272,10 @@ body::before {
   border-radius:16px; padding:20px;
   font-size:15px; line-height:1.8; color:var(--text);
   position:relative;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  min-height:0;
+  height:auto;
 }
 .dream-result::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
@@ -501,6 +505,7 @@ document.querySelectorAll('.unlock-card').forEach((card, i) => {
 <script>
 function openDreamModal() {
   document.getElementById('dreamOverlay').classList.add('open');
+  document.getElementById('dreamSheet').style.overflowY = 'auto';
   document.body.style.overflow = 'hidden';
   document.documentElement.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('dreamText')?.focus(), 450);
@@ -531,9 +536,12 @@ function resetDreamModal() {
 async function typeWords(el, text) {
   const words = text.split(' ');
   let current = '';
+  const sheet = document.getElementById('dreamSheet');
   for (let i = 0; i < words.length; i++) {
     current += (i === 0 ? '' : ' ') + words[i];
     el.innerHTML = current.replace(/\n/g, '<br>');
+    // scroll suave pra acompanhar o texto
+    if (sheet) sheet.scrollTop = sheet.scrollHeight;
     await new Promise(r => setTimeout(r, 40 + Math.random() * 28));
   }
 }
