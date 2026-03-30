@@ -291,6 +291,94 @@ body::before {
 .dm-dots span:nth-child(2){animation-delay:.2s} .dm-dots span:nth-child(3){animation-delay:.4s}
 @keyframes dm-bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
 
+
+/* ===== DREAM MODAL ===== */
+.dm-wrap {
+  display:none;
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(4,2,12,0.92);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  align-items:flex-end;
+  justify-content:center;
+}
+.dm-wrap.open { display:flex; }
+.dm-box {
+  width:100%;
+  max-width:560px;
+  max-height:88vh;
+  max-height:88svh;
+  background:#130a28;
+  border:1px solid rgba(124,77,221,0.3);
+  border-bottom:none;
+  border-radius:24px 24px 0 0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.dm-head {
+  flex-shrink:0;
+  padding:20px 20px 16px;
+  text-align:center;
+  border-bottom:1px solid rgba(124,77,221,0.15);
+  position:relative;
+}
+.dm-handle { width:36px; height:4px; border-radius:2px; background:rgba(124,77,221,0.3); margin:0 auto 16px; }
+.dm-close {
+  position:absolute; top:18px; right:18px;
+  width:30px; height:30px; border-radius:50%;
+  background:#0c0618; border:1px solid rgba(124,77,221,0.25);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; color:rgba(237,232,248,0.6); cursor:pointer;
+}
+.dm-title { font-family:'Cinzel',serif; font-size:18px; font-weight:600; color:#faedc4; letter-spacing:0.04em; }
+.dm-body {
+  flex:1;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:20px 20px max(24px, env(safe-area-inset-bottom));
+}
+.dm-sub { font-size:14px; color:rgba(237,232,248,0.6); line-height:1.6; margin-bottom:18px; text-align:center; }
+.dm-textarea {
+  width:100%; background:#0c0618;
+  border:1px solid rgba(124,77,221,0.25); border-radius:14px;
+  padding:14px; color:#ede8f8;
+  font-family:'Lora',serif; font-size:15px; line-height:1.7;
+  resize:none; outline:none; min-height:100px;
+  box-sizing:border-box;
+  transition:border-color 0.2s;
+}
+.dm-textarea:focus { border-color:rgba(124,77,221,0.55); }
+.dm-textarea::placeholder { color:rgba(237,232,248,0.35); font-style:italic; }
+.dm-btn {
+  width:100%; margin-top:12px;
+  background:linear-gradient(135deg,#7c4ddd,#a87aff);
+  border:none; border-radius:14px; padding:15px;
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700;
+  letter-spacing:0.08em; color:#fff; cursor:pointer;
+  box-shadow:0 4px 18px rgba(124,77,221,0.35);
+}
+.dm-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.dm-label {
+  font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.14em;
+  text-transform:uppercase; color:#a87aff;
+  margin:0 0 12px; display:flex; align-items:center; gap:8px;
+}
+.dm-label::after { content:''; flex:1; height:1px; background:rgba(124,77,221,0.2); }
+.dm-text { font-size:15px; line-height:1.85; color:#ede8f8; word-wrap:break-word; }
+.dm-again {
+  width:100%; margin-top:16px;
+  background:transparent; border:1px solid rgba(124,77,221,0.2);
+  border-radius:14px; padding:12px;
+  font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.08em;
+  color:rgba(237,232,248,0.45); cursor:pointer; display:none;
+}
+.dm-dots { display:inline-flex; gap:4px; align-items:center; }
+.dm-dots span { width:6px; height:6px; border-radius:50%; background:#a87aff; opacity:0.4; animation:dm-b 1.2s ease-in-out infinite; }
+.dm-dots span:nth-child(2){animation-delay:.2s} .dm-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dm-b{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
+
 </style>
 </head>
 <body>
@@ -461,56 +549,61 @@ document.querySelectorAll('.unlock-card').forEach((card, i) => {
 </script>
 
 
+
+
 <!-- ===== DREAM MODAL ===== -->
-<div class="dm-overlay" id="dmOverlay">
-  <div class="dm-sheet">
-    <div class="dm-close" onclick="dmClose()">✕</div>
-    <div class="dm-handle"></div>
-    <div style="font-size:32px;text-align:center;margin-bottom:10px">🌙</div>
-    <div class="dm-title">Dream Interpretation</div>
-    <div class="dm-sub" id="dmSub">Describe your dream to Gabriel. He will decode the symbols and reveal what Heaven is whispering to you.</div>
-    <div id="dmInput">
-      <textarea class="dm-textarea" id="dmText" placeholder="I dreamed that..." rows="4"></textarea>
-      <button class="dm-btn" id="dmBtn" onclick="dmInterpret()">✦ Reveal the Message</button>
+<div class="dm-wrap" id="dmWrap">
+  <div class="dm-box">
+    <div class="dm-head">
+      <div class="dm-handle"></div>
+      <div class="dm-close" onclick="dmClose()">✕</div>
+      <div style="font-size:28px;margin-bottom:8px">🌙</div>
+      <div class="dm-title">Dream Interpretation</div>
     </div>
-    <div id="dmOutput" style="display:none">
-      <div class="dm-label">Gabriel's Interpretation</div>
-      <div class="dm-text" id="dmResult"></div>
-      <button class="dm-again" id="dmAgain" onclick="dmReset()">✦ Interpret another dream</button>
+    <div class="dm-body" id="dmBody">
+      <div id="dmInputArea">
+        <div class="dm-sub">Describe your dream to Gabriel. He will decode the symbols and reveal what Heaven is whispering to you.</div>
+        <textarea class="dm-textarea" id="dmText" placeholder="I dreamed that..." rows="4"></textarea>
+        <button class="dm-btn" id="dmBtn" onclick="dmInterpret()">✦ Reveal the Message</button>
+      </div>
+      <div id="dmOutputArea" style="display:none">
+        <div class="dm-label">Gabriel's Interpretation</div>
+        <div class="dm-text" id="dmResult"></div>
+        <button class="dm-again" id="dmAgain" onclick="dmReset()">✦ Interpret another dream</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 function dmOpen() {
-  document.getElementById('dmOverlay').classList.add('open');
+  document.getElementById('dmWrap').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('dmText').focus(), 300);
+  setTimeout(() => document.getElementById('dmText').focus(), 350);
 }
 function dmClose() {
-  document.getElementById('dmOverlay').classList.remove('open');
+  document.getElementById('dmWrap').classList.remove('open');
   document.body.style.overflow = '';
 }
 function dmReset() {
   document.getElementById('dmText').value = '';
-  document.getElementById('dmResult').textContent = '';
-  document.getElementById('dmOutput').style.display = 'none';
-  document.getElementById('dmInput').style.display = 'block';
-  document.getElementById('dmSub').style.display = 'block';
+  document.getElementById('dmResult').innerHTML = '';
+  document.getElementById('dmOutputArea').style.display = 'none';
+  document.getElementById('dmInputArea').style.display = 'block';
   document.getElementById('dmAgain').style.display = 'none';
   document.getElementById('dmBtn').disabled = false;
   document.getElementById('dmBtn').textContent = '✦ Reveal the Message';
-  document.getElementById('dmOverlay').scrollTop = 0;
+  document.getElementById('dmBody').scrollTop = 0;
 }
 async function dmType(el, text) {
   const words = text.split(' ');
   let out = '';
-  const overlay = document.getElementById('dmOverlay');
+  const body = document.getElementById('dmBody');
   for (let i = 0; i < words.length; i++) {
     out += (i === 0 ? '' : ' ') + words[i];
-    el.textContent = out;
-    overlay.scrollTop = overlay.scrollHeight;
-    await new Promise(r => setTimeout(r, 42 + Math.random() * 28));
+    el.innerHTML = out.replace(/\n/g, '<br>');
+    body.scrollTop = body.scrollHeight;
+    await new Promise(r => setTimeout(r, 42 + Math.random() * 26));
   }
 }
 async function dmInterpret() {
@@ -519,10 +612,8 @@ async function dmInterpret() {
   const btn = document.getElementById('dmBtn');
   btn.disabled = true;
   btn.innerHTML = '<div class="dm-dots"><span></span><span></span><span></span></div>';
-
   const userName = localStorage.getItem('ap_name') || 'dear one';
   const memory   = localStorage.getItem('ap_memory') || '';
-
   try {
     const res = await fetch('/api/dream', {
       method:'POST',
@@ -531,20 +622,15 @@ async function dmInterpret() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'error');
-
-    document.getElementById('dmInput').style.display = 'none';
-    document.getElementById('dmSub').style.display = 'none';
-    document.getElementById('dmOutput').style.display = 'block';
-
-    const el = document.getElementById('dmResult');
-    await dmType(el, data.reply);
+    document.getElementById('dmInputArea').style.display = 'none';
+    document.getElementById('dmOutputArea').style.display = 'block';
+    document.getElementById('dmBody').scrollTop = 0;
+    await dmType(document.getElementById('dmResult'), data.reply);
     document.getElementById('dmAgain').style.display = 'block';
-
   } catch(e) {
     console.error(e);
     btn.disabled = false;
     btn.textContent = '✦ Reveal the Message';
-    alert('Gabriel could not reach through. Please try again.');
   }
 }
 </script>
