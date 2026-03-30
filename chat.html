@@ -205,8 +205,7 @@ function recordTurn(role, text, time) {
 }
 
 async function sendMessage() {
-  // FIX 1: Trava de segurança para impedir o duplo Enter
-  if (sendBtn.disabled) return; 
+  if (sendBtn.disabled) return;
 
   const text = msgInput.value.trim();
   if (!text) return;
@@ -218,8 +217,7 @@ async function sendMessage() {
 
   msgInput.value = '';
   msgInput.style.height = 'auto';
-  
-  // FIX 2: Desativa botão E o campo de texto
+
   sendBtn.disabled = true;
   msgInput.disabled = true;
   document.getElementById('angelStatus').textContent = 'Gabriel is writing...';
@@ -238,27 +236,64 @@ async function sendMessage() {
       })
     });
 
-    const data = await res.json();
-    removeTyping();
+    if (!res.ok) throw new Error('Server error');
 
-    // FIX 3: Lê o erro real do backend em vez de engolir ele
-    if (!res.ok || data.error) {
-      throw new Error(data.error || 'Server error');
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer    = '';
+    let fullReply = '';
+
+    // Cria a bolha do anjo vazia — o texto vai aparecer aqui palavra a palavra
+    removeTyping();
+    const initial = USER_NAME.charAt(0).toUpperCase();
+    const msgDiv  = document.createElement('div');
+    msgDiv.className = 'msg angel';
+    msgDiv.innerHTML = `<div class="msg-avatar">✦</div>
+      <div class="msg-content">
+        <div class="msg-bubble" id="streamBubble"></div>
+        <div class="msg-time" id="streamTime"></div>
+      </div>`;
+    chatArea.appendChild(msgDiv);
+    const bubble = document.getElementById('streamBubble');
+    scrollBottom();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.error) throw new Error(parsed.error);
+          if (parsed.chunk) {
+            fullReply += parsed.chunk;
+            bubble.innerHTML = fullReply.replace(/\n/g, '<br>');
+            scrollBottom();
+          }
+        } catch (_) {}
+      }
     }
 
-    const reply = data.reply;
-    const angelTime = getTime();
-    appendMsg(reply, 'angel', angelTime);
-    recordTurn('angel', reply, angelTime);
+    // Finaliza: remove IDs temporários, adiciona horário
+    bubble.removeAttribute('id');
+    const timeEl = document.getElementById('streamTime');
+    if (timeEl) { timeEl.textContent = getTime(); timeEl.removeAttribute('id'); }
+
+    if (fullReply) recordTurn('angel', fullReply, getTime());
 
   } catch (err) {
     removeTyping();
     console.error(err);
-    // Mensagem amigável de erro de conexão, e não a frase fantasma repetitiva
-    const errMsg = 'I am sensing a disturbance in the connection right now. Please wait a moment and speak to me again.';
-    appendMsg(errMsg, 'angel');
+    appendMsg('I am sensing a disturbance in the connection right now. Please wait a moment and speak to me again.', 'angel');
   } finally {
-    // FIX 4: Libera tudo de volta só depois de terminar
     sendBtn.disabled = false;
     msgInput.disabled = false;
     msgInput.focus();
