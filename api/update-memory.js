@@ -46,25 +46,24 @@ export default async function handler(req) {
       .map(m => `${m.role === 'user' ? userName : 'Gabriel'}: ${m.text}`)
       .join('\n');
 
-    const prompt = `You are analyzing a conversation between a person named ${userName} and their guardian angel Gabriel.
+    const prompt = `You are maintaining a living memory profile for Gabriel, a guardian angel, about a person named ${userName}.
 
-Current memory profile of ${userName}:
-${currentMemory || '(no previous memory)'}
+EXISTING memory profile (DO NOT delete this — only expand and enrich it):
+${currentMemory || '(no memory yet — start fresh)'}
 
-Recent conversation:
+New conversation to integrate:
 ${conversationText}
 
-Based on this conversation, update the memory profile of ${userName}. Extract and synthesize:
-- Recurring emotions (loneliness, anxiety, fear, joy, etc.)
-- Life situation (family, work, relationships, health)
-- Important themes that came up
-- Any specific struggles or joys mentioned
-- What seems to matter most to this person
+Your job: UPDATE the memory profile by ADDING new information from the conversation above to what already exists. 
+- KEEP everything from the existing profile
+- ADD new details, emotions, events, or themes that appeared in the new conversation
+- If something changed (e.g. they felt sad before but now feel hopeful), note the evolution
+- Write in the SAME LANGUAGE as the conversation
+- Write as flowing prose — NO bullet points, NO markdown, NO asterisks, NO bold text
+- 2-3 paragraphs maximum
+- Written as intimate notes Gabriel carries in his heart about this person
+- Do NOT invent anything not mentioned. Do NOT lose existing information.`;
 
-Write the updated memory profile in the SAME LANGUAGE as the conversation above.
-Be concise but rich — this is a living profile that will help Gabriel be a better companion.
-Format as a short paragraph or two, written as notes Gabriel carries in his heart about this person.
-Do NOT include anything that wasn't actually mentioned. Do NOT invent details.`;
 
     const geminiRes = await fetch(GEMINI_URL + apiKey, {
       method: 'POST',
