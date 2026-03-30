@@ -217,24 +217,22 @@ body::before {
 /* ===== DREAM MODAL ===== */
 .dm-overlay {
   display:none;
-  position:fixed; inset:0; z-index:999;
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
   background:rgba(4,2,12,0.88);
   backdrop-filter:blur(14px);
-  overflow-y:auto;
+  overflow-y:scroll;
   -webkit-overflow-scrolling:touch;
-  padding:0 0 40px;
 }
 .dm-overlay.open { display:block; }
 .dm-sheet {
-  width:100%; max-width:520px;
-  margin:auto;
+  width:calc(100% - 32px); max-width:520px;
+  margin:0 auto 60px;
   background:#130a28;
   border:1px solid rgba(124,77,221,0.25);
-  border-top:none;
   border-radius:0 0 28px 28px;
-  padding:28px 24px 32px;
+  padding:28px 24px 36px;
   position:relative;
-  min-height:100px;
+  box-sizing:border-box;
 }
 .dm-sheet::after {
   content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
