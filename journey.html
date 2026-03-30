@@ -210,6 +210,99 @@ body::before {
 .nav-item.active::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--gold); margin-top:2px; }
 
 ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
+
+/* ===== DREAM MODAL ===== */
+.modal-overlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(4,2,12,0.85);
+  backdrop-filter:blur(12px);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.3s ease;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-sheet {
+  width:100%; max-width:520px;
+  background:var(--bg-card);
+  border:1px solid var(--violet-dim);
+  border-bottom:none;
+  border-radius:28px 28px 0 0;
+  padding:28px 24px max(28px,env(safe-area-inset-bottom));
+  position:relative; overflow-y:auto; max-height:90dvh;
+  transform:translateY(100%);
+  transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.modal-overlay.open .modal-sheet { transform:translateY(0); }
+.modal-sheet::before {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-br),transparent); opacity:0.5;
+  pointer-events:none;
+}
+.modal-handle { width:40px; height:4px; border-radius:2px; background:var(--violet-dim); margin:0 auto 24px; }
+.modal-title { font-family:'Cinzel',serif; font-size:20px; font-weight:600; color:var(--gold-pale); letter-spacing:0.04em; text-align:center; margin-bottom:6px; }
+.modal-subtitle { font-size:14px; color:var(--text-dim); text-align:center; line-height:1.6; margin-bottom:22px; }
+.dream-input {
+  width:100%; background:var(--bg-inner);
+  border:1px solid var(--violet-dim); border-radius:16px;
+  padding:16px; color:var(--text);
+  font-family:'Lora',serif; font-size:15px; line-height:1.7;
+  resize:none; outline:none; min-height:110px;
+  transition:border-color 0.2s;
+}
+.dream-input:focus { border-color:rgba(124,77,221,0.5); }
+.dream-input::placeholder { color:var(--text-dim); font-style:italic; }
+.modal-btn {
+  width:100%; margin-top:14px;
+  background:linear-gradient(135deg,#7c4ddd,#a87aff);
+  border:none; border-radius:16px; padding:16px;
+  font-family:'Cinzel',serif; font-size:14px; font-weight:700;
+  letter-spacing:0.08em; color:#fff;
+  cursor:pointer; box-shadow:0 4px 20px rgba(124,77,221,0.4);
+  transition:transform 0.15s, opacity 0.2s;
+}
+.modal-btn:active { transform:scale(0.98); }
+.modal-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+.dream-result {
+  display:none; margin-top:20px;
+  background:var(--bg-inner); border:1px solid var(--violet-dim);
+  border-radius:16px; padding:20px;
+  font-size:15px; line-height:1.8; color:var(--text);
+  position:relative;
+}
+.dream-result::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--violet-lt),transparent); opacity:0.4;
+  pointer-events:none;
+}
+.dream-result.visible { display:block; }
+.dream-result-label {
+  font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.14em;
+  text-transform:uppercase; color:var(--violet-lt);
+  margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+.dream-result-label::after { content:''; flex:1; height:1px; background:var(--violet-dim); }
+.modal-close {
+  position:absolute; top:20px; right:20px;
+  width:32px; height:32px; border-radius:50%;
+  background:var(--bg-inner); border:1px solid var(--violet-dim);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; color:var(--text-dim); cursor:pointer; z-index:1;
+}
+.modal-new-btn {
+  width:100%; margin-top:14px;
+  background:transparent; border:1px solid var(--violet-dim);
+  border-radius:16px; padding:13px;
+  font-family:'Cinzel',serif; font-size:12px; letter-spacing:0.08em;
+  color:var(--text-dim); cursor:pointer;
+  transition:border-color 0.2s, color 0.2s;
+}
+.modal-new-btn:active { border-color:var(--violet-lt); color:var(--violet-lt); }
+.typing-dots { display:inline-flex; gap:4px; align-items:center; padding:4px 0; }
+.typing-dots span { width:6px; height:6px; border-radius:50%; background:var(--violet-lt); opacity:0.4; animation:dot-bounce 1.2s ease-in-out infinite; }
+.typing-dots span:nth-child(2){animation-delay:0.2s}
+.typing-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes dot-bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
+
 </style>
 </head>
 <body>
@@ -246,7 +339,7 @@ body::before {
 <div class="section-header">Sacred Gifts from Gabriel</div>
 <div class="unlocks-grid">
 
-  <div class="unlock-card unlocked">
+  <div class="unlock-card unlocked" onclick="openDreamModal()">
     <div class="unlock-icon" style="background:rgba(124,77,221,0.15)">🌙</div>
     <div class="unlock-info">
       <div class="unlock-days">3 Days — Unlocked</div>
@@ -378,5 +471,106 @@ document.querySelectorAll('.unlock-card').forEach((card, i) => {
   if (pct) pct.textContent = dayNumJ + ' / ' + req + ' days';
 });
 </script>
+
+<!-- ===== DREAM MODAL ===== -->
+<div class="modal-overlay" id="dreamOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" id="dreamSheet">
+    <div class="modal-close" onclick="closeDreamModal()">✕</div>
+    <div class="modal-handle"></div>
+    <div style="font-size:32px;text-align:center;margin-bottom:12px">🌙</div>
+    <div class="modal-title">Dream Interpretation</div>
+    <div class="modal-subtitle" id="dreamSubtitle">Describe your dream to Gabriel. He will decode the symbols and reveal what Heaven is whispering to you.</div>
+
+    <div id="dreamInputArea">
+      <textarea class="dream-input" id="dreamText" placeholder="I dreamed that..." rows="4"></textarea>
+      <button class="modal-btn" id="dreamBtn" onclick="interpretDream()">✦ Reveal the Message</button>
+    </div>
+
+    <div class="dream-result" id="dreamResult">
+      <div class="dream-result-label">Gabriel's Interpretation</div>
+      <div id="dreamResultText"></div>
+      <button class="modal-new-btn" onclick="resetDreamModal()">✦ Interpret another dream</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openDreamModal() {
+  document.getElementById('dreamOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('dreamText')?.focus(), 450);
+}
+
+function closeDreamModal() {
+  document.getElementById('dreamOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('dreamOverlay')) closeDreamModal();
+}
+
+function resetDreamModal() {
+  document.getElementById('dreamText').value = '';
+  document.getElementById('dreamResult').classList.remove('visible');
+  document.getElementById('dreamInputArea').style.display = 'block';
+  document.getElementById('dreamSubtitle').style.display = 'block';
+  document.getElementById('dreamResultText').innerHTML = '';
+  document.getElementById('dreamBtn').disabled = false;
+  document.getElementById('dreamBtn').textContent = '✦ Reveal the Message';
+  setTimeout(() => document.getElementById('dreamText')?.focus(), 100);
+}
+
+async function typeWords(el, text) {
+  const words = text.split(' ');
+  let current = '';
+  for (let i = 0; i < words.length; i++) {
+    current += (i === 0 ? '' : ' ') + words[i];
+    el.innerHTML = current.replace(/\n/g, '<br>');
+    await new Promise(r => setTimeout(r, 40 + Math.random() * 28));
+  }
+}
+
+async function interpretDream() {
+  const dreamText = document.getElementById('dreamText').value.trim();
+  if (!dreamText) return;
+
+  const btn = document.getElementById('dreamBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+
+  const userName = localStorage.getItem('ap_name') || 'dear one';
+  const memory   = localStorage.getItem('ap_memory') || '';
+
+  try {
+    const res = await fetch('/api/dream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dream: dreamText, userName, memory })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'error');
+
+    document.getElementById('dreamInputArea').style.display = 'none';
+    document.getElementById('dreamSubtitle').style.display = 'none';
+
+    const resultEl = document.getElementById('dreamResult');
+    const textEl   = document.getElementById('dreamResultText');
+    resultEl.classList.add('visible');
+
+    await typeWords(textEl, data.reply);
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = '✦ Reveal the Message';
+    document.getElementById('dreamResultText').textContent = 'Gabriel could not reach through at this moment. Please try again.';
+    document.getElementById('dreamResult').classList.add('visible');
+    document.getElementById('dreamInputArea').style.display = 'none';
+  }
+}
+</script>
+
 </body>
 </html>
